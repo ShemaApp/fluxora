@@ -1,0 +1,58 @@
+# FLUXORA — Documentación de versiones
+
+## Propósito
+
+Esta carpeta concentra **todos los archivos Markdown del proyecto**. La documentación se organiza por etapa y tipo de cambio para que cada modificación pueda rastrearse, revisarse y diagnosticarse sin depender de memoria externa.
+
+> Regla de trabajo: el código fuente conserva la operación; esta carpeta conserva la explicación, el alcance, las decisiones y las pruebas de cada versión.
+
+## Mapa documental
+
+| Carpeta | Contenido | Uso para diagnóstico |
+|---|---|---|
+| `00_especificacion_fuente` | Especificaciones visuales y operativas recibidas para FLUXORA. | Confirmar qué se solicitó originalmente antes de atribuir un fallo a la implementación. |
+| `01_modelo_operativo` | Alcance rector, limpieza operativa y catálogo de pantallas por rol. | Revisar si un módulo pertenece al modelo de venta, distribución, medidor, caja o conciliación. |
+| `02_flujo_chofer_y_jerarquia` | Flujo ultra-rápido del chofer y modelo de asignaciones Empresa → Zona → Repartidor → Vehículo → Clientes. | Revisar incidencias del flujo móvil, asignaciones y separación ADMIN/REPARTIDOR. |
+| `03_medidor_y_conciliacion` | Lecturas, conversiones, ventas por medidor y cierre de jornada. | Revisar fallos de equivalencias, lecturas físicas/calculadas, diferencias y conciliación. |
+| `04_arquitectura_y_manual` | Arquitectura del sistema y manual de usuario. | Entender dependencias generales y el uso esperado de la aplicación. |
+| `05_reestructuracion_visual` | Reportes de cambios exclusivamente visuales. | Comparar la capa FLUXORA visual sin confundirla con lógica o reglas de negocio. |
+| `06_publicacion_y_pruebas` | Publicación, GitHub Pages y pruebas del entorno. | Revisar si el fallo corresponde al despliegue, caché, PWA o entorno de prueba. |
+| `07_pwa_iconos` | Iconos PWA, manifest, versión de caché y script reproducible de generación. | Revisar nombre, iconos instalables, rutas del manifest y actualización del service worker. |
+
+## Especificación fuente
+
+`00_especificacion_fuente/pantallas.md` es la referencia principal para identidad visual, paleta, responsive, navegación y exclusiones funcionales. No debe confundirse con una autorización para inventar lógica que no exista en el proyecto.
+
+## Orden recomendado para buscar un fallo
+
+Primero identificar la pantalla y el rol afectados. Después revisar el documento de la carpeta temática correspondiente y, finalmente, comparar el comportamiento con el código del módulo relacionado. Para problemas de publicación, caché o carga visual se debe revisar `06_publicacion_y_pruebas` y la versión del service worker antes de modificar código.
+
+| Síntoma | Primera carpeta a revisar |
+|---|---|
+| El repartidor no puede avanzar por la lista, carrito o pago | `02_flujo_chofer_y_jerarquia` |
+| La lectura calculada, equivalencia o diferencia no coincide | `03_medidor_y_conciliacion` |
+| ADMIN y REPARTIDOR ven una estructura incorrecta | `01_modelo_operativo` y `02_flujo_chofer_y_jerarquia` |
+| El estilo, logo, responsive o navegación visual falla | `00_especificacion_fuente` y `05_reestructuracion_visual` |
+| La página pública no refleja el último cambio | `06_publicacion_y_pruebas` |
+| El icono, nombre o instalación PWA no se actualiza | `07_pwa_iconos` |
+| No se entiende una dependencia o módulo | `04_arquitectura_y_manual` |
+
+## Regla para futuras versiones
+
+Las nuevas entregas documentales deben agregarse dentro de esta carpeta. Se recomienda crear una subcarpeta numerada por etapa o versión, conservar los documentos anteriores y no sobrescribir un informe histórico cuando el cambio corresponda a una iteración diferente.
+
+Formato sugerido:
+
+```text
+documentación versiones/
+└── 08_nombre_de_la_nueva_iteracion/
+    ├── CAMBIOS.md
+    ├── PRUEBAS.md
+    └── DECISIONES_PENDIENTES.md
+```
+
+Cada nueva carpeta debe indicar qué cambió, qué no cambió, cómo se validó, qué archivos fueron afectados y qué hacer si aparece un fallo.
+
+## Estado actual
+
+La documentación existente fue reubicada desde la raíz del proyecto. También se incorporó una copia de `pantallas.md` como especificación fuente dentro de `00_especificacion_fuente`. La versión `07_pwa_iconos` documenta la conversión del símbolo FLUXORA a iconos PWA y la actualización del manifest y la caché. No se modificaron los contenidos históricos de los documentos al moverlos.

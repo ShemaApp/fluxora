@@ -1,13 +1,13 @@
 {
-  "name": "Mi Negocio",
-  "short_name": "Mi Negocio",
-  "description": "Sistema de ventas, créditos, rutas y reparto",
+  "name": "FLUXORA — Medición · Distribución · Control",
+  "short_name": "FLUXORA",
+  "description": "Sistema de medición, distribución y control de agua",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#ECEDE7",
-  "theme_color": "#1E211D",
+  "background_color": "#F8FAFC",
+  "theme_color": "#063B5C",
   "lang": "es-MX",
   "icons": [
     {
