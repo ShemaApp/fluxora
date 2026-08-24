@@ -31,6 +31,7 @@ function Login() {
     setLoading(false);
   };
   return React.createElement("div", {
+    className: 'fx-login-shell',
     style: {
       minHeight: '100vh',
       display: 'flex',
@@ -40,17 +41,18 @@ function Login() {
       padding: 28,
       background: 'var(--bg)'
     }
-  }, React.createElement("div", {
-    // EDITAR: reemplaza este bloque por <img src="assets/logo.png" .../>
-    // cuando tengas el logo del cliente. Mientras tanto usa el emoji de
-    // brand.config.js para no depender de un archivo que no existe.
+  }, React.createElement("img", {
+    className: 'fx-login-logo-img',
+    src: 'assets/brand/fluxora-logo.svg',
+    alt: 'FLUXORA — Medición, Distribución, Control',
     "aria-label": `Emblema de ${NEGOCIO.nombre}`,
     style: {
       fontSize: 56,
       lineHeight: 1,
       marginBottom: 8
     }
-  }, NEGOCIO.emoji), React.createElement("div", {
+  }), React.createElement("div", {
+    className: 'fx-login-brand-name',
     style: {
       fontSize: 22,
       fontWeight: 700,
@@ -69,6 +71,7 @@ function Login() {
       letterSpacing: '.08em'
     }
   }, "Panel de administración"), React.createElement("div", {
+    className: 'fx-login-panel',
     style: {
       width: '100%',
       maxWidth: 340,
@@ -108,6 +111,7 @@ function Login() {
       opacity: loading ? 0.6 : 1
     }
   }, loading ? 'Ingresando…' : 'Iniciar sesión →'), React.createElement("div", {
+    className: 'fx-login-links',
     style: {
       marginTop: 18,
       paddingTop: 13,

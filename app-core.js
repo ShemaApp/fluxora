@@ -143,7 +143,8 @@ const Card = ({
   children,
   style = {}
 }) => React.createElement("div", {
-  style: {
+    className: 'fx-card',
+    style: {
     background: 'var(--surface)',
     border: '1px solid var(--line)',
     borderRadius: 4,
@@ -160,9 +161,10 @@ const BFill = ({
   style = {},
   ...p
 }) => React.createElement("button", {
-  onClick: onClick,
-  style: {
-    background: bg,
+    className: 'fx-btn-fill',
+    onClick: onClick,
+    style: {
+      background: bg,
     color,
     border: 'none',
     borderRadius: 3,
@@ -184,10 +186,11 @@ const BOut = ({
   style = {},
   ...p
 }) => React.createElement("button", {
-  onClick: onClick,
-  style: {
-    background: 'transparent',
-    color,
+    className: 'fx-btn-outline',
+    onClick: onClick,
+    style: {
+      background: 'transparent',
+      color,
     border: `1.5px solid ${color}`,
     borderRadius: 3,
     padding: '8px 14px',
@@ -205,8 +208,9 @@ const Inp = ({
   style = {},
   ...p
 }) => React.createElement("input", {
-  style: {
-    background: 'var(--surface-2)',
+    className: 'fx-input',
+    style: {
+      background: 'var(--surface-2)',
     border: '1px solid var(--line-strong)',
     borderRadius: 3,
     padding: '8px 10px',
@@ -221,8 +225,9 @@ const Inp = ({
 const Lbl = ({
   children
 }) => React.createElement("div", {
-  style: {
-    fontSize: 10,
+    className: 'fx-label',
+    style: {
+      fontSize: 10,
     color: 'var(--ink-faint)',
     marginBottom: 3,
     textTransform: 'uppercase',
@@ -235,8 +240,9 @@ const Row = ({
   children,
   style = {}
 }) => React.createElement("div", {
-  style: {
-    display: 'flex',
+    className: 'fx-row',
+    style: {
+      display: 'flex',
     alignItems: 'center',
     gap: 8,
     ...style
@@ -247,8 +253,9 @@ const Tag = ({
   color = 'var(--accent-text)',
   style = {}
 }) => React.createElement("span", {
-  style: {
-    background: `color-mix(in srgb, ${color} 14%, white)`,
+    className: 'fx-tag',
+    style: {
+      background: `color-mix(in srgb, ${color} 14%, white)`,
     color,
     border: `1px solid color-mix(in srgb, ${color} 45%, white)`,
     borderRadius: 3,
@@ -265,6 +272,7 @@ function Modal({
   children
 }) {
   return React.createElement("div", {
+    className: 'fx-modal-backdrop',
     style: {
       position: 'fixed',
       inset: 0,
@@ -324,6 +332,7 @@ const Toggle = ({
   onChange,
   disabled = false
 }) => React.createElement("button", {
+  className: 'fx-toggle',
   onClick: () => !disabled && onChange(!checked),
   disabled: disabled,
   "aria-pressed": checked,

@@ -171,6 +171,7 @@ function Configuracion({
     flash('PIN eliminado de este dispositivo');
   };
   return React.createElement("div", {
+    className: 'fx-page-config',
     style: {
       padding: '16px 12px'
     }

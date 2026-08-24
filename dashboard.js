@@ -6,6 +6,7 @@ function StatTile({
   onClick
 }) {
   return React.createElement("div", {
+    className: 'fx-stat-tile',
     onClick: onClick,
     style: {
       background: bg,
@@ -139,6 +140,7 @@ function Dashboard({
   const tituloAcciones = isRepartidor ? 'Herramientas de campo' : 'Acciones rápidas';
   const ayudaAcciones = isRepartidor ? 'Accesos para vender desde tu transferencia, identificar clientes y consultar tu corte.' : 'Accesos directos para las tareas operativas más frecuentes.';
   return React.createElement("div", {
+    className: 'fx-page-home',
     style: {
       padding: '16px 12px'
     }

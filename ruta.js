@@ -202,7 +202,7 @@ function FlujoChoferRapido({
   const porcentajeAgua = aguaCargadaNumero > 0 ? Math.max(0, Math.min(100, aguaDisponibleNumero / aguaCargadaNumero * 100)) : 0;
   const color = { ink: 'var(--ink)', soft: 'var(--ink-soft)', faint: 'var(--ink-faint)', line: 'var(--line)', surface: 'var(--surface)', accent: 'var(--accent)', ok: 'var(--ok-bg)', okText: 'var(--ok-text)' };
 
-  return React.createElement('div', { style: { padding: '14px 12px 28px' } },
+  return React.createElement('div', { className: 'fx-page-route', style: { padding: '14px 12px 28px' } },
     React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 } },
       React.createElement('div', null, React.createElement('div', { style: { fontSize: 21, fontWeight: 800, letterSpacing: '-.02em' } }, 'Ruta del día'), React.createElement('div', { style: { fontSize: 12, color: color.soft, marginTop: 3 } }, zona)),
       React.createElement('div', { style: { fontSize: 11, color: color.soft, textAlign: 'right' } }, 'PASO ', paso, ' DE 3', React.createElement('div', { style: { marginTop: 5, height: 4, width: 72, background: color.line, borderRadius: 5, overflow: 'hidden' } }, React.createElement('div', { style: { height: '100%', width: `${paso * 33.333}%`, background: color.accent } })))

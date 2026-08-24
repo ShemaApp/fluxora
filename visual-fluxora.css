@@ -1,0 +1,509 @@
+/* FLUXORA — capa visual únicamente. No contiene lógica ni listeners. */
+:root {
+  --fx-navy: #063B5C;
+  --fx-petroleum: #075985;
+  --fx-cyan: #06B6D4;
+  --fx-cyan-light: #67E8F9;
+  --fx-graphite: #0F172A;
+  --fx-slate: #64748B;
+  --fx-bg: #F8FAFC;
+  --fx-white: #FFFFFF;
+  --fx-border: #E2E8F0;
+  --fx-success: #16A34A;
+  --fx-warning: #F59E0B;
+  --fx-danger: #DC2626;
+  --fx-shadow: 0 12px 28px rgba(6, 59, 92, .08);
+  --fx-shadow-strong: 0 18px 40px rgba(6, 59, 92, .15);
+}
+
+html, body {
+  background: var(--fx-bg) !important;
+  color: var(--fx-graphite) !important;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: .55;
+  background-image:
+    linear-gradient(rgba(6,59,92,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(6,59,92,.035) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+#root { position: relative; z-index: 1; }
+
+.app-shell {
+  background: transparent !important;
+  padding-bottom: 28px !important;
+}
+
+.app-topbar {
+  background: var(--fx-navy) !important;
+  color: var(--fx-white) !important;
+  height: 62px !important;
+  border-bottom: 1px solid rgba(103,232,249,.26) !important;
+  box-shadow: 0 8px 22px rgba(6,59,92,.16) !important;
+  padding-left: 18px !important;
+  padding-right: 18px !important;
+}
+
+.app-topbar button {
+  color: rgba(255,255,255,.78) !important;
+}
+
+.app-topbar button:hover,
+.app-topbar button:focus-visible {
+  color: var(--fx-cyan-light) !important;
+}
+
+.app-accent-bar {
+  top: 62px !important;
+  height: 4px !important;
+  background: var(--fx-cyan) !important;
+}
+
+.app-offline-banner {
+  top: 66px !important;
+  min-height: 30px !important;
+  padding: 7px 14px !important;
+  background: #FFF7ED !important;
+  color: #9A3412 !important;
+  border-bottom: 1px solid #FED7AA !important;
+  letter-spacing: .01em !important;
+}
+
+.app-main-content {
+  width: 100% !important;
+  max-width: 1440px !important;
+  margin: 0 auto !important;
+  padding-top: 24px !important;
+  padding-left: 260px !important;
+  padding-right: 32px !important;
+}
+
+.app-main-content > div:first-child {
+  border-radius: 10px !important;
+}
+
+.app-nav-shell {
+  pointer-events: none !important;
+}
+
+.app-nav-shell nav {
+  width: 244px !important;
+  background: var(--fx-navy) !important;
+  border-right: 1px solid rgba(103,232,249,.18) !important;
+  box-shadow: 10px 0 30px rgba(6,59,92,.13) !important;
+  padding-top: 78px !important;
+  padding-bottom: 24px !important;
+}
+
+.app-nav-shell nav::before {
+  content: "FLUXORA";
+  display: block;
+  color: var(--fx-white);
+  font-family: var(--font-display), Arial, sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  padding: 0 22px 22px;
+  border-bottom: 1px solid rgba(103,232,249,.18);
+  margin-bottom: 14px;
+}
+
+.app-nav-shell nav button {
+  min-height: 42px !important;
+  padding: 10px 20px !important;
+  border: 0 !important;
+  border-left: 3px solid transparent !important;
+  color: rgba(255,255,255,.72) !important;
+  font-size: 12px !important;
+  letter-spacing: .02em !important;
+  background: transparent !important;
+}
+
+.app-nav-shell nav button:hover,
+.app-nav-shell nav button:focus-visible {
+  color: var(--fx-white) !important;
+  background: rgba(6,182,212,.14) !important;
+}
+
+.app-nav-shell nav button[style*="var(--rail-border)"],
+.app-nav-shell nav button[style*="var(--accent)"] {
+  color: var(--fx-white) !important;
+  background: rgba(6,182,212,.16) !important;
+  border-left-color: var(--fx-cyan) !important;
+}
+
+/* Primitivas compartidas: las clases se agregan sin cambiar comportamiento. */
+.fx-card {
+  background: rgba(255,255,255,.94) !important;
+  border: 1px solid var(--fx-border) !important;
+  border-radius: 12px !important;
+  box-shadow: var(--fx-shadow) !important;
+  padding: 18px !important;
+  margin-bottom: 14px !important;
+}
+
+.fx-card:hover { box-shadow: var(--fx-shadow-strong) !important; }
+
+.fx-btn-fill {
+  background: var(--fx-cyan) !important;
+  color: var(--fx-navy) !important;
+  border-radius: 8px !important;
+  min-height: 42px !important;
+  padding: 10px 16px !important;
+  font-family: var(--font-body), Arial, sans-serif !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  letter-spacing: .04em !important;
+  box-shadow: 0 6px 14px rgba(6,182,212,.18) !important;
+}
+
+.fx-btn-fill:hover,
+.fx-btn-fill:focus-visible { background: var(--fx-cyan-light) !important; }
+
+.fx-btn-outline {
+  background: var(--fx-white) !important;
+  color: var(--fx-petroleum) !important;
+  border: 1px solid var(--fx-petroleum) !important;
+  border-radius: 8px !important;
+  min-height: 40px !important;
+  padding: 9px 15px !important;
+  font-family: var(--font-body), Arial, sans-serif !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+}
+
+.fx-btn-outline:hover,
+.fx-btn-outline:focus-visible { background: #ECFEFF !important; }
+
+.fx-input {
+  background: var(--fx-white) !important;
+  color: var(--fx-graphite) !important;
+  border: 1px solid #CBD5E1 !important;
+  border-radius: 8px !important;
+  min-height: 42px !important;
+  padding: 10px 12px !important;
+  font-family: var(--font-body), Arial, sans-serif !important;
+}
+
+.fx-input:focus { border-color: var(--fx-cyan) !important; box-shadow: 0 0 0 3px rgba(6,182,212,.12) !important; }
+
+.fx-label {
+  color: var(--fx-slate) !important;
+  font-family: var(--font-body), Arial, sans-serif !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: .08em !important;
+}
+
+.fx-row { gap: 12px !important; }
+
+.fx-tag {
+  border: 1px solid rgba(6,59,92,.16) !important;
+  border-radius: 999px !important;
+  padding: 4px 10px !important;
+  font-family: var(--font-body), Arial, sans-serif !important;
+  font-size: 11px !important;
+  letter-spacing: .02em !important;
+}
+
+.fx-modal-backdrop {
+  background: rgba(15,23,42,.64) !important;
+  backdrop-filter: blur(3px);
+}
+
+.fx-modal {
+  background: var(--fx-white) !important;
+  border: 1px solid var(--fx-border) !important;
+  border-top: 4px solid var(--fx-cyan) !important;
+  border-radius: 16px 16px 0 0 !important;
+  box-shadow: var(--fx-shadow-strong) !important;
+}
+
+.fx-toggle { box-shadow: inset 0 0 0 1px rgba(6,59,92,.08) !important; }
+
+/* Login: composición visual del deck, sin cambiar el handler de autenticación. */
+.fx-login-shell {
+  min-height: 100vh !important;
+  background: var(--fx-navy) !important;
+  position: relative !important;
+  overflow: hidden !important;
+  padding: 34px 24px 0 !important;
+}
+
+.fx-login-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: .26;
+  background-image:
+    linear-gradient(120deg, transparent 0 47%, rgba(103,232,249,.16) 47.2% 47.35%, transparent 47.5%),
+    linear-gradient(30deg, transparent 0 57%, rgba(103,232,249,.11) 57.2% 57.35%, transparent 57.5%);
+  background-size: 160px 160px, 220px 220px;
+  pointer-events: none;
+}
+
+.fx-login-shell::after {
+  content: "Aplicación con derechos reservados 2026-2029";
+  position: absolute;
+  left: 28px;
+  bottom: 22px;
+  color: rgba(255,255,255,.62);
+  font-family: var(--font-body), Arial, sans-serif;
+  font-size: 11px;
+  letter-spacing: .04em;
+  z-index: 1;
+}
+
+.fx-login-shell > * { position: relative; z-index: 2; }
+
+.fx-login-logo-img {
+  display: block !important;
+  width: 306px !important;
+  height: 112px !important;
+  object-fit: contain !important;
+  background: #F8FAFC !important;
+  border: 1px solid rgba(103,232,249,.28) !important;
+  border-radius: 14px !important;
+  padding: 10px 16px !important;
+  box-shadow: 0 14px 26px rgba(0,0,0,.18) !important;
+  margin: 0 auto 14px !important;
+}
+
+.fx-login-brand-name { display: none !important; }
+
+.fx-login-shell > div:nth-child(3) {
+  display: none !important;
+  color: rgba(255,255,255,.72) !important;
+  font-family: var(--font-body), Arial, sans-serif !important;
+  font-size: 11px !important;
+  letter-spacing: .18em !important;
+  margin-bottom: 24px !important;
+}
+
+.fx-login-panel {
+  background: rgba(255,255,255,.98) !important;
+  border: 0 !important;
+  border-top: 4px solid var(--fx-cyan) !important;
+  border-radius: 14px !important;
+  box-shadow: var(--fx-shadow-strong) !important;
+  padding: 26px !important;
+}
+
+.fx-login-panel label,
+.fx-login-panel > div:first-child {
+  color: var(--fx-slate) !important;
+}
+
+.fx-login-panel input { background: #F8FAFC !important; }
+
+.fx-login-panel button {
+  border-radius: 8px !important;
+  min-height: 44px !important;
+}
+
+.fx-login-panel a { color: var(--fx-petroleum) !important; }
+
+/* Home y módulos: densidad operativa y encabezados. */
+.app-main-content h1,
+.app-main-content h2,
+.app-main-content h3 {
+  color: var(--fx-navy) !important;
+  letter-spacing: -.02em !important;
+}
+
+.app-main-content h1 { font-size: clamp(24px, 3vw, 34px) !important; }
+.app-main-content h2 { font-size: clamp(20px, 2.4vw, 28px) !important; }
+.app-main-content h3 { font-size: 17px !important; }
+
+.app-main-content button:not(.app-menu-toggle),
+.app-main-content select {
+  min-height: 38px;
+}
+
+.app-main-content table {
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  overflow: hidden !important;
+  border: 1px solid var(--fx-border) !important;
+  background: var(--fx-white) !important;
+}
+
+.app-main-content th {
+  background: #EFF6FF !important;
+  color: var(--fx-petroleum) !important;
+  font-size: 11px !important;
+  letter-spacing: .05em !important;
+}
+
+.app-main-content td,
+.app-main-content th { border-bottom: 1px solid var(--fx-border) !important; }
+
+@media (min-width: 768px) {
+  .app-main-content { padding-left: 278px !important; padding-right: 38px !important; padding-top: 28px !important; }
+  .app-topbar { padding-left: 278px !important; padding-right: 38px !important; }
+  .app-offline-banner { padding-left: 278px !important; padding-right: 38px !important; text-align: left !important; }
+  .fx-login-shell { flex-direction: row !important; }
+}
+
+@media (min-width: 1280px) {
+  .app-main-content { padding-left: 300px !important; padding-right: 48px !important; }
+  .app-topbar { padding-left: 300px !important; padding-right: 48px !important; }
+  .app-offline-banner { padding-left: 300px !important; padding-right: 48px !important; }
+}
+
+@media (max-width: 767px) {
+  .app-topbar { height: 58px !important; }
+  .app-accent-bar { top: 58px !important; }
+  .app-offline-banner { top: 62px !important; }
+  .app-shell { padding-top: 90px !important; }
+  .app-main-content { padding: 18px 14px 24px !important; }
+  .app-nav-shell nav { width: min(86vw, 300px) !important; padding-top: 72px !important; }
+  .fx-card { padding: 15px !important; border-radius: 10px !important; }
+  .fx-login-logo-img { width: 272px !important; height: 104px !important; }
+  .fx-login-panel { width: min(100%, 380px) !important; padding: 22px !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+}
+
+.fx-page-home,
+.fx-page-config {
+  max-width: 1180px !important;
+  margin: 0 auto !important;
+}
+
+.fx-page-home > div:first-child,
+.fx-page-config > div:first-child {
+  color: var(--fx-navy) !important;
+  font-family: var(--font-body), Arial, sans-serif !important;
+  font-size: 25px !important;
+  font-weight: 800 !important;
+  letter-spacing: -.02em !important;
+  border-bottom: 1px solid var(--fx-border) !important;
+  padding-bottom: 14px !important;
+  margin-bottom: 18px !important;
+}
+
+.fx-stat-tile {
+  border: 1px solid rgba(6,59,92,.12) !important;
+  border-radius: 12px !important;
+  min-height: 120px !important;
+  padding: 18px !important;
+  box-shadow: var(--fx-shadow) !important;
+}
+
+.fx-stat-tile > div:first-child > div:first-child {
+  font-family: var(--font-mono), monospace !important;
+  letter-spacing: -.03em !important;
+}
+
+.fx-page-config > div:nth-child(4) {
+  background: rgba(255,255,255,.72) !important;
+  border: 1px solid var(--fx-border) !important;
+  border-radius: 10px !important;
+  padding: 6px !important;
+}
+
+.fx-page-config > div:nth-child(4) button {
+  border-radius: 7px !important;
+  font-family: var(--font-body), Arial, sans-serif !important;
+  letter-spacing: .01em !important;
+}
+
+.fx-page-home button,
+.fx-page-config button {
+  transition: background-color .18s ease, color .18s ease, box-shadow .18s ease !important;
+}
+
+@media (max-width: 767px) {
+  .fx-page-home > div:first-child,
+  .fx-page-config > div:first-child {
+    font-size: 22px !important;
+  }
+  .fx-page-home,
+  .fx-page-config { max-width: 100% !important; }
+}
+
+.fx-page-route,
+.fx-page-jornada,
+.fx-page-jornada-admin {
+  max-width: 1040px !important;
+  margin: 0 auto !important;
+}
+
+.fx-page-route > div:first-child,
+.fx-page-jornada > div:first-child,
+.fx-page-jornada-admin > div:first-child {
+  padding-top: 4px !important;
+  padding-bottom: 16px !important;
+  margin-bottom: 16px !important;
+  border-bottom: 1px solid var(--fx-border) !important;
+}
+
+.fx-page-route input,
+.fx-page-route select,
+.fx-page-jornada input,
+.fx-page-jornada select,
+.fx-page-jornada-admin input {
+  background: var(--fx-white) !important;
+  color: var(--fx-graphite) !important;
+  border-color: #CBD5E1 !important;
+  border-radius: 9px !important;
+  min-height: 42px !important;
+}
+
+.fx-page-route button,
+.fx-page-jornada button,
+.fx-page-jornada-admin button {
+  border-radius: 9px !important;
+}
+
+.fx-page-route > div:nth-child(3),
+.fx-page-jornada > div:nth-child(3),
+.fx-page-jornada-admin > div:not(:first-child) {
+  box-shadow: var(--fx-shadow) !important;
+}
+
+.fx-page-route > div:nth-child(3) {
+  border-color: rgba(6,182,212,.22) !important;
+}
+
+.fx-page-jornada > div:nth-child(3) {
+  border-color: rgba(6,182,212,.24) !important;
+}
+
+.fx-page-route [style*="background: var(--surface-2)"],
+.fx-page-jornada [style*="background: var(--surface-2)"],
+.fx-page-jornada-admin [style*="background: var(--surface-2)"] {
+  background: #EFF6FF !important;
+  border: 1px solid #DBEAFE !important;
+}
+
+@media (max-width: 767px) {
+  .fx-page-route,
+  .fx-page-jornada,
+  .fx-page-jornada-admin { max-width: 100% !important; }
+  .fx-page-route > div:first-child,
+  .fx-page-jornada > div:first-child,
+  .fx-page-jornada-admin > div:first-child { margin-bottom: 12px !important; }
+}
+
+.fx-modal-backdrop > div {
+  background: var(--fx-white) !important;
+  border: 1px solid var(--fx-border) !important;
+  border-top: 4px solid var(--fx-cyan) !important;
+  border-radius: 16px 16px 0 0 !important;
+  box-shadow: var(--fx-shadow-strong) !important;
+}
+
+/* Se conserva el bloque de enlaces existente, pero no forma parte de la composición solicitada del login. */
+.fx-login-links { display: none !important; }
+.fx-login-footer { letter-spacing: .01em; }

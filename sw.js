@@ -4,16 +4,19 @@
    archivo .js/.html del proyecto, actualiza APP_SHELL y sube CACHE_VERSION
    para forzar la actualización en los dispositivos ya instalados. */
 
-const CACHE_VERSION = 'v4-escalas-medicion';
+const CACHE_VERSION = 'v5-identidad-visual';
 const CACHE_NAME = `app-shell-${CACHE_VERSION}`;
 
 const APP_SHELL = [
   './',
   './index.html',
+  './visual-fluxora.css',
   './offline.html',
   './manifest.json',
   './firebase-init.js',
   './brand.config.js',
+  './assets/brand/fluxora-logo.svg',
+  './assets/brand/fluxora-logo.png',
   './app-core.js',
   './db/colecciones.js',
   './db/semillas.js',
