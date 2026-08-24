@@ -349,7 +349,7 @@ function Reportes({
         Responsable: transferencia.repartidorNombre || '',
         'Responsable UID': transferencia.repartidorId || '',
         Vehículo: transferencia.vehiculo || '',
-        Zona: transferencia.zona || '',
+        Localidad: transferencia.localidad || '',
         'Asignada por': transferencia.asignadaPorNombre || '',
         'Recibida por': transferencia.recibidoPorNombre || '',
         'Motivo de merma': transferencia.motivoMerma || '',
@@ -371,7 +371,7 @@ function Reportes({
             'Cantidad devuelta': numeroOVacioExcel(item.cantDevuelta),
             Merma: numeroOVacioExcel(item.cantMerma),
             Responsable: transferencia.repartidorNombre || '',
-            Zona: transferencia.zona || ''
+            Localidad: transferencia.localidad || ''
           });
         });
       });

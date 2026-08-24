@@ -48,7 +48,7 @@ const claveLocalidad = valor => normalizarLocalidad(valor).normalize('NFD').repl
 const LOCALIDAD_NUEVA = '__nueva_localidad__';
 const LOCALIDAD_SIN_CLASIFICAR = '__sin_localidad__';
 
-function SelectorLocalidad({ value, localidades, nuevaValue, onSeleccionar, onCrear, onCambiar }) {
+function SelectorLocalidad({ value, localidades, nuevaValue, onSeleccionar, onCrear, onCambiar, disabled = false }) {
   const [texto, setTexto] = useState(value || '');
   const [abierto, setAbierto] = useState(false);
   useEffect(() => {
@@ -64,20 +64,23 @@ function SelectorLocalidad({ value, localidades, nuevaValue, onSeleccionar, onCr
     React.createElement(Inp, {
       value: nuevaValue,
       placeholder: 'Nombre de la nueva localidad',
-      onChange: e => onCrear(normalizarLocalidad(e.target.value))
+      onChange: e => onCrear(normalizarLocalidad(e.target.value)),
+      disabled
     }));
   return React.createElement('div', { style: { position: 'relative', marginBottom: 6 } },
     React.createElement(Inp, {
       value: texto,
       placeholder: 'Escribe para buscar localidad…',
-      onFocus: () => setAbierto(true),
+      onFocus: () => !disabled && setAbierto(true),
       onChange: e => {
+        if (disabled) return;
         setTexto(e.target.value);
         setAbierto(true);
         if (exacta && claveLocalidad(e.target.value) !== claveLocalidad(exacta)) onCambiar();
       },
       onBlur: () => setTimeout(() => setAbierto(false), 150),
-      'aria-label': 'Buscar localidad'
+      'aria-label': 'Buscar localidad',
+      disabled
     }),
     abierto && React.createElement('div', {
       style: {
@@ -488,13 +491,14 @@ function Clientes({
   clientes,
   notas,
   creditos,
-  zonas = [],
+  localidades: localidadesCatalogo = [],
   tarifas = [],
   currentUser
 }) {
   const puedeEditar = currentUser?.role === 'admin' || permisoEdita(currentUser).clientes;
   const puedeCrear = currentUser?.role === 'admin';
-  const zonasActivas = (zonas || []).filter(z => z.activo !== false).sort((a, b) => String(a.nombre || '').localeCompare(String(b.nombre || ''), 'es'));
+  const localidadesPermitidas = obtenerLocalidadesAsignadas({ localidades: localidadesCatalogo, currentUser, localidadIds: currentUser?.localidadIds });
+  const localidadesPermitidasIds = new Set(localidadesPermitidas.map(localidad => localidad.id));
   const [filtroEstado, setFiltroEstado] = useState('activos');
   const [filtroCredito, setFiltroCredito] = useState('todos');
   const [q, setQ] = useState('');
@@ -515,10 +519,11 @@ function Clientes({
     if (Number.isFinite(saldo) && saldo > 0) m[c.clienteId] = (m[c.clienteId] || 0) + saldo;
     return m;
   }, {});
-  const clientesPorEstado = clientes.filter(c => filtroEstado === 'todos' ? true : filtroEstado === 'activos' ? c.activo : !c.activo);
+  const clientesEnAlcance = currentUser?.role === 'repartidor' ? clientes.filter(cliente => localidadesPermitidasIds.has(cliente.localidadId) || (!cliente.localidadId && localidadesPermitidas.some(localidad => claveLocalidad(localidad.nombre) === claveLocalidad(cliente.localidadNombre || cliente.localidad || cliente.domicilio)))) : clientes;
+  const clientesPorEstado = clientesEnAlcance.filter(c => filtroEstado === 'todos' ? true : filtroEstado === 'activos' ? c.activo : !c.activo);
   const localidades = (() => {
     const porClave = new Map();
-    [...LOCALIDADES_BASE_CABORCA, ...clientes.map(cliente => cliente.localidad || cliente.domicilio || '')].forEach(valor => {
+    [...localidadesCatalogo.map(localidad => localidad.nombre || ''), ...LOCALIDADES_BASE_CABORCA, ...clientes.map(cliente => cliente.localidadNombre || cliente.localidad || cliente.domicilio || '')].forEach(valor => {
       const nombre = normalizarLocalidad(valor);
       const clave = claveLocalidad(nombre);
       if (nombre && !porClave.has(clave)) porClave.set(clave, nombre);
@@ -531,7 +536,8 @@ function Clientes({
     const existente = localidades.find(localidad => claveLocalidad(localidad) === claveLocalidad(nombre));
     return existente || nombre;
   };
-  const localidadDeCliente = cliente => localidadCanonica(cliente.localidad || cliente.domicilio || '');
+  const localidadRef = valor => (localidadesCatalogo || []).find(localidad => claveLocalidad(localidad.nombre) === claveLocalidad(valor));
+  const localidadDeCliente = cliente => localidadCanonica(cliente.localidadNombre || cliente.localidad || cliente.domicilio || '');
   const tieneCredito = cliente => Number(cmap[cliente.id] || 0) > 0;
   const coincideBusqueda = cliente => {
     const termino = q.trim().toLowerCase();
@@ -542,6 +548,7 @@ function Clientes({
   const contarClientes = condicion => clientesPorEstado.filter(condicion).length;
   const contarLocalidad = localidad => clientesPorEstado.filter(cliente => claveLocalidad(localidadDeCliente(cliente)) === claveLocalidad(localidad)).length;
   const sinLocalidad = clientesPorEstado.filter(cliente => !localidadDeCliente(cliente)).length;
+  const localidadSeleccionada = form ? (localidadesCatalogo || []).find(localidad => String(localidad.id) === String(form.localidadId)) || localidadRef(form.localidad || form.localidadNombre) : null;
   const list = clientesPorEstado.filter(c => filtroCredito === 'credito' ? tieneCredito(c) : filtroCredito === 'sin-credito' ? !tieneCredito(c) : true).filter(c => filtroGPS === 'sin-gps' ? !c.ubicacion : filtroGPS === 'con-gps' ? !!c.ubicacion : true).filter(coincideLocalidad).filter(coincideBusqueda).slice().sort((a, b) => {
     const localidadA = localidadDeCliente(a) || 'Sin clasificar';
     const localidadB = localidadDeCliente(b) || 'Sin clasificar';
@@ -560,39 +567,31 @@ function Clientes({
       alert('El ID fijo debe ser numérico.');
       return;
     }
-    if (!form.zonaId) {
-      alert('Asigna una zona al cliente antes de guardarlo.');
-      return;
-    }
     if (clientes.some(c => c.id !== form.id && String(c.identificacion || '').trim().toLowerCase() === identificacion.toLowerCase())) {
       alert('Ese ID fijo ya está asignado a otro cliente.');
       return;
     }
-    const zonaAsignada = zonasActivas.find(z => z.id === form.zonaId);
-    if (!zonaAsignada) {
-      alert('La zona seleccionada ya no está disponible.');
-      return;
-    }
-    const localidadNormalizada = String(form.localidadNueva !== undefined ? form.localidadNueva : form.localidad || form.domicilio || '').trim().toLowerCase();
-    const localidadesZona = (zonaAsignada.localidades || []).map(v => String(v).trim().toLowerCase()).filter(Boolean);
-    if (localidadesZona.length > 0 && !localidadesZona.includes(localidadNormalizada)) {
-      alert('La localidad capturada no pertenece a la zona seleccionada. Primero actualiza las localidades de la zona.');
-      return;
-    }
-    const localidadEntrada = form.localidadNueva !== undefined ? form.localidadNueva : form.localidad || form.domicilio || '';
+    const localidadEntrada = form.localidadNueva !== undefined ? form.localidadNueva : form.localidad || form.localidadNombre || form.domicilio || '';
     const localidad = localidadCanonica(localidadEntrada);
     if (!localidad) {
       alert('Selecciona una localidad existente o escribe una nueva.');
       return;
     }
+    let referenciaLocalidad = localidadRef(localidad) || null;
+    if (!referenciaLocalidad?.id) {
+      const coincidencia = await db.collection(COLECCIONES.LOCALIDADES).where('nombre', '==', localidad).limit(1).get();
+      if (!coincidencia.empty) referenciaLocalidad = { id: coincidencia.docs[0].id, ...coincidencia.docs[0].data() };
+    }
+    if (!referenciaLocalidad?.id) {
+      const referenciaNueva = db.collection(COLECCIONES.LOCALIDADES).doc();
+      referenciaLocalidad = { id: referenciaNueva.id, nombre: localidad, activo: true };
+      await referenciaNueva.set({ nombre: localidad, activo: true, creadoPorUid: currentUser.uid, creadoPorNombre: currentUser.nombre || '', fechaCreacion: new Date().toISOString() });
+    }
     const item = {
       identificacion,
       nombre: form.nombre,
-      zonaId: zonaAsignada.id,
-      zonaNombre: zonaAsignada.nombre,
-      zonaChoferId: zonaAsignada.choferId,
-      zonaChoferNombre: zonaAsignada.choferNombre || '',
-      zonaVehiculo: zonaAsignada.vehiculo || '',
+      localidadId: referenciaLocalidad.id,
+      localidadNombre: localidad,
       tipo: form.tipo || 'Residencial',
       formaHabitual: form.formaHabitual || 'Efectivo',
       tarifaHabitualId: form.tarifaHabitualId || null,
@@ -730,12 +729,12 @@ function Clientes({
       tipo: 'Residencial',
       formaHabitual: 'Efectivo',
       tarifaHabitualId: '',
-      zonaId: '',
+      localidadId: '',
       domicilio: '',
       localidad: ''
     })
   }, "+ Nuevo")), React.createElement(Inp, {
-    placeholder: "🔍 Buscar cliente, ID fijo, zona o localidad…",
+    placeholder: "🔍 Buscar cliente, ID fijo o localidad…",
     value: q,
     onChange: e => setQ(e.target.value),
     style: {
@@ -1094,12 +1093,24 @@ function Clientes({
     placeholder: "Ej. 1, 2, 3…",
     inputMode: "numeric",
     style: { marginBottom: 10 }
-  }), React.createElement(Lbl, null, "Zona asignada"), React.createElement("select", {
-    value: form.zonaId || '',
-    onChange: e => setForm(f => ({ ...f, zonaId: e.target.value })),
-    disabled: currentUser.role !== 'admin',
-    style: { width: '100%', padding: '10px 12px', marginBottom: 12, borderRadius: 8, border: '1px solid var(--line-strong)', background: currentUser.role === 'admin' ? 'var(--surface)' : 'var(--surface-2)', color: 'var(--ink)' }
-  }, React.createElement("option", { value: '' }, 'Selecciona una zona obligatoria'), zonasActivas.map(z => React.createElement("option", { key: z.id, value: z.id }, z.nombre + ' · ' + (z.choferNombre || 'sin chofer')))), form.zonaId && React.createElement('div', { style: { background: 'var(--info-bg)', border: '1px solid var(--line)', borderRadius: 9, padding: '9px 10px', marginBottom: 12, fontSize: 11, lineHeight: 1.5 } }, React.createElement('strong', null, 'ASIGNACIONES OPERATIVAS'), React.createElement('div', null, 'EMPRESA  →  ', zonasActivas.find(z => z.id === form.zonaId)?.nombre || 'Zona'), React.createElement('div', null, 'CHOFER  →  ', zonasActivas.find(z => z.id === form.zonaId)?.choferNombre || 'Sin chofer'), React.createElement('div', null, 'VEHÍCULO  →  ', zonasActivas.find(z => z.id === form.zonaId)?.vehiculo || 'Sin vehículo'), React.createElement('div', null, 'CLIENTES  →  ', clientes.filter(c => c.zonaId === form.zonaId).length, ' en esta zona')), React.createElement(Lbl, null, "Tipo"), React.createElement("select", { value: form.tipo || 'Residencial', onChange: e => setForm(f => ({ ...f, tipo: e.target.value })), style: { width: '100%', padding: '10px 12px', marginBottom: 10, borderRadius: 8, border: '1px solid var(--line-strong)', background: 'var(--surface)', color: 'var(--ink)' } }, React.createElement('option', { value: 'Residencial' }, 'Residencial'), React.createElement('option', { value: 'Comercial' }, 'Comercial')), React.createElement(Lbl, null, "Forma habitual"), React.createElement("select", { value: form.formaHabitual || 'Efectivo', onChange: e => setForm(f => ({ ...f, formaHabitual: e.target.value })), style: { width: '100%', padding: '10px 12px', marginBottom: 12, borderRadius: 8, border: '1px solid var(--line-strong)', background: 'var(--surface)', color: 'var(--ink)' } }, React.createElement('option', { value: 'Efectivo' }, 'Efectivo'), React.createElement('option', { value: 'Crédito' }, 'Crédito')), React.createElement(Lbl, null, "Tarifa habitual"), React.createElement("select", { value: form.tarifaHabitualId || '', onChange: e => setForm(f => ({ ...f, tarifaHabitualId: e.target.value || null })), style: { width: '100%', padding: '10px 12px', marginBottom: 12, borderRadius: 8, border: '1px solid var(--line-strong)', background: 'var(--surface)', color: 'var(--ink)' } }, React.createElement('option', { value: '' }, 'Tarifa base de medición'), (tarifas || []).filter(t => t.activo !== false).map(t => React.createElement('option', { key: t.id, value: t.id }, t.nombre))), React.createElement(Lbl, null, "Nombre"), React.createElement(Inp, {
+  }), React.createElement(Lbl, null, "Localidad asignada"), React.createElement(SelectorLocalidad, {
+    value: form.localidad || form.localidadNombre || form.domicilio || '',
+    localidades,
+    nuevaValue: form.localidadNueva,
+    onSeleccionar: valor => setForm(f => {
+      const referencia = localidadRef(valor);
+      const siguiente = { ...f, localidad: valor, localidadNombre: valor, localidadId: referencia?.id || '' };
+      delete siguiente.localidadNueva;
+      return siguiente;
+    }),
+    onCrear: valor => setForm(f => ({ ...f, localidadNueva: valor, localidadId: '' })),
+    onCambiar: () => setForm(f => {
+      const siguiente = { ...f, localidad: '', localidadNombre: '', localidadId: '' };
+      delete siguiente.localidadNueva;
+      return siguiente;
+    }),
+    disabled: currentUser.role !== 'admin'
+  }), (form.localidad || form.localidadNombre || form.localidadId) && React.createElement('div', { style: { background: 'var(--info-bg)', border: '1px solid var(--line)', borderRadius: 9, padding: '9px 10px', marginBottom: 12, fontSize: 11, lineHeight: 1.5 } }, React.createElement('strong', null, 'ASIGNACIÓN OPERATIVA'), React.createElement('div', null, 'LOCALIDAD  →  ', form.localidadNombre || form.localidad || localidadSeleccionada?.nombre || 'Localidad'), React.createElement('div', null, 'REPARTIDOR  →  ', localidadSeleccionada?.repartidorNombre || localidadSeleccionada?.repartidorId || 'Pendiente de asignación'), React.createElement('div', null, 'VEHÍCULO  →  ', localidadSeleccionada?.vehiculoNombre || localidadSeleccionada?.vehiculoId || 'Pendiente de asignación'), React.createElement('div', null, 'MEDIDOR  →  ', localidadSeleccionada?.medidorNombre || localidadSeleccionada?.medidorId || 'Pendiente de asignación'), React.createElement('div', null, 'CLIENTES  →  ', clientes.filter(c => (form.localidadId && c.localidadId === form.localidadId) || claveLocalidad(localidadDeCliente(c)) === claveLocalidad(form.localidad || form.localidadNombre)).length, ' en esta localidad')), React.createElement(Lbl, null, "Tipo"), React.createElement("select", { value: form.tipo || 'Residencial', onChange: e => setForm(f => ({ ...f, tipo: e.target.value })), style: { width: '100%', padding: '10px 12px', marginBottom: 10, borderRadius: 8, border: '1px solid var(--line-strong)', background: 'var(--surface)', color: 'var(--ink)' } }, React.createElement('option', { value: 'Residencial' }, 'Residencial'), React.createElement('option', { value: 'Comercial' }, 'Comercial')), React.createElement(Lbl, null, "Forma habitual"), React.createElement("select", { value: form.formaHabitual || 'Efectivo', onChange: e => setForm(f => ({ ...f, formaHabitual: e.target.value })), style: { width: '100%', padding: '10px 12px', marginBottom: 12, borderRadius: 8, border: '1px solid var(--line-strong)', background: 'var(--surface)', color: 'var(--ink)' } }, React.createElement('option', { value: 'Efectivo' }, 'Efectivo'), React.createElement('option', { value: 'Crédito' }, 'Crédito')), React.createElement(Lbl, null, "Tarifa habitual"), React.createElement("select", { value: form.tarifaHabitualId || '', onChange: e => setForm(f => ({ ...f, tarifaHabitualId: e.target.value || null })), style: { width: '100%', padding: '10px 12px', marginBottom: 12, borderRadius: 8, border: '1px solid var(--line-strong)', background: 'var(--surface)', color: 'var(--ink)' } }, React.createElement('option', { value: '' }, 'Tarifa base de medición'), (tarifas || []).filter(t => t.activo !== false).map(t => React.createElement('option', { key: t.id, value: t.id }, t.nombre))), React.createElement(Lbl, null, "Nombre"), React.createElement(Inp, {
     value: form.nombre,
     onChange: e => setForm(f => ({
       ...f,

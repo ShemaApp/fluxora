@@ -1,36 +1,45 @@
-const FACTOR_LITROS_POR_GARRAFON = 20;
-function JornadaMedidor({ zonas = [], jornadas = [], notas = [], clientes = [], medicion = null, vehiculos = [], medidores = [], currentUser = {}, onIrA }) {
-  const zonasDisponibles = (zonas || []).filter(z => z.activo !== false && (currentUser.role === 'admin' || z.choferId === currentUser.uid || z.repartidorId === currentUser.uid));
+/* jornada.js — Jornada y medidor.
+   La localidad es la unidad operativa; vehículo y medidor llegan como
+   referencias separadas desde su asignación administrativa. */
+function JornadaMedidor({ localidades = [], jornadas = [], notas = [], clientes = [], medicion = null, vehiculos = [], medidores = [], currentUser = {}, onIrA }) {
+  const localidadesDisponibles = obtenerLocalidadesAsignadas({ localidades, currentUser, localidadIds: currentUser.localidadIds });
   const jornadaAbierta = (jornadas || []).find(j => j.estado === 'abierta' && (currentUser.role === 'admin' || j.repartidorId === currentUser.uid));
   const [form, setForm] = useState(() => {
     const borrador = typeof appReadDraft === 'function' ? appReadDraft('jornada', currentUser?.uid) : null;
-    return borrador?.form || { zonaId: '', vehiculoId: '', vehiculo: '', vehiculoNombre: '', medidorId: '', medidorNombre: '', lecturaInicial: '', aguaCargadaLitros: '' };
+    return borrador?.form || { localidadId: '', localidadNombre: '', vehiculoId: '', vehiculo: '', vehiculoNombre: '', medidorId: '', medidorNombre: '', lecturaInicial: '', aguaCargadaLitros: '' };
   });
   const [lecturaFinal, setLecturaFinal] = useState('');
   const [mensaje, setMensaje] = useState('');
-  const zonaActual = zonasDisponibles.find(z => z.id === form.zonaId);
-  const vehiculoActual = resolverVehiculoOperativo({ jornada: form, zona: zonaActual, vehiculos });
-  const medidorActual = resolverMedidorOperativo({ jornada: form, zona: zonaActual, vehiculo: vehiculoActual, medidores, medicion });
+  const localidadActual = localidadesDisponibles.find(l => l.id === form.localidadId) || buscarLocalidadOperativa({ localidades: localidadesDisponibles, localidadId: form.localidadId, localidadNombre: form.localidadNombre });
+  const vehiculoActual = resolverVehiculoOperativo({ jornada: form, localidad: localidadActual, vehiculos });
+  const medidorActual = resolverMedidorOperativo({ jornada: form, localidad: localidadActual, vehiculo: vehiculoActual, medidores, medicion });
   const referenciasCoinciden = j => {
     const tieneVehiculo = !!vehiculoActual.id;
     const tieneMedidor = !!medidorActual.id;
     const mismoVehiculo = tieneVehiculo && String(j.vehiculoId || '') === String(vehiculoActual.id);
     const mismoMedidor = tieneMedidor && String(j.medidorId || '') === String(medidorActual.id);
+    const mismaLocalidad = !!localidadActual?.id && String(j.localidadId || '') === String(localidadActual.id);
     if (tieneVehiculo && tieneMedidor) return mismoVehiculo && mismoMedidor;
     if (tieneVehiculo) return mismoVehiculo;
     if (tieneMedidor) return mismoMedidor;
-    return !!form.vehiculo && String(j.vehiculoId || j.vehiculo) === String(form.vehiculo);
+    if (mismaLocalidad) return true;
+    return !!form.localidadNombre && String(j.localidadNombre || j.localidad || '') === String(form.localidadNombre);
   };
-  const jornadaVehiculoAbierta = (jornadas || []).find(j => j.estado === 'abierta' && referenciasCoinciden(j));
-  const jornadasVehiculo = (jornadas || []).filter(j => j.estado === 'cerrada' && referenciasCoinciden(j)).sort((a, b) => new Date(b.fechaCierre || 0) - new Date(a.fechaCierre || 0));
-  const jornadaAnterior = jornadasVehiculo[0];
-  const lecturaZonaCompatible = !zonaActual?.medidorId || !medidorActual.id || String(zonaActual.medidorId) === String(medidorActual.id);
-  const lecturaAnterior = jornadaAnterior?.lecturaFinal ?? (lecturaZonaCompatible ? zonaActual?.lecturaActual : null) ?? null;
-  const litrosPorUnidad = Number(zonaActual?.litrosPorUnidad ?? medicion?.litrosPorUnidad ?? FACTOR_LITROS_POR_GARRAFON);
-  const incrementoContadorPorUnidad = Number(zonaActual?.incrementoContadorPorUnidad ?? medicion?.incrementoContadorPorUnidad ?? 2);
-  const unidadComercial = zonaActual?.unidadComercial || medicion?.unidadComercial || 'Garrafón';
-  const precioPorUnidad = Number(zonaActual?.precioPorUnidad ?? medicion?.precioPorUnidad ?? 0);
-  const clientesJornada = (clientes || []).filter(c => c.activo !== false && (jornadaAbierta ? c.zonaId === jornadaAbierta.zonaId : c.zonaId === form.zonaId));
+  const jornadaLocalidadAbierta = (jornadas || []).find(j => j.estado === 'abierta' && referenciasCoinciden(j));
+  const jornadasInstrumento = (jornadas || []).filter(j => j.estado === 'cerrada' && referenciasCoinciden(j)).sort((a, b) => new Date(b.fechaCierre || 0) - new Date(a.fechaCierre || 0));
+  const jornadaAnterior = jornadasInstrumento[0];
+  const lecturaLocalidadCompatible = !localidadActual?.medidorId || !medidorActual.id || String(localidadActual.medidorId) === String(medidorActual.id);
+  const lecturaAnterior = jornadaAnterior?.lecturaFinal ?? (lecturaLocalidadCompatible ? localidadActual?.lecturaActual : null) ?? null;
+  const litrosPorUnidad = Number(localidadActual?.litrosPorUnidad ?? medicion?.litrosPorUnidad ?? FACTOR_LITROS_POR_GARRAFON);
+  const incrementoContadorPorUnidad = Number(localidadActual?.incrementoContadorPorUnidad ?? medicion?.incrementoContadorPorUnidad ?? 2);
+  const unidadComercial = localidadActual?.unidadComercial || medicion?.unidadComercial || 'Garrafón';
+  const precioPorUnidad = Number(localidadActual?.precioPorUnidad ?? medicion?.precioPorUnidad ?? 0);
+  const clientesJornada = (clientes || []).filter(c => {
+    if (c.activo === false) return false;
+    const localidadId = jornadaAbierta?.localidadId || form.localidadId;
+    const localidadNombre = jornadaAbierta?.localidadNombre || form.localidadNombre || localidadActual?.nombre;
+    return (localidadId && String(c.localidadId || '') === String(localidadId)) || (!c.localidadId && localidadNombre && String(c.localidadNombre || c.localidad || c.domicilio || '').trim().toLowerCase() === String(localidadNombre).trim().toLowerCase());
+  });
   const clientesAtendidos = new Set((notas || []).filter(n => jornadaAbierta && n.capturadoPorUid === jornadaAbierta.repartidorId && new Date(n.fecha || 0).getTime() >= new Date(jornadaAbierta.fechaInicio || 0).getTime()).map(n => n.clienteId));
   const flash = texto => { setMensaje(texto); setTimeout(() => setMensaje(''), 3000); };
 
@@ -38,18 +47,19 @@ function JornadaMedidor({ zonas = [], jornadas = [], notas = [], clientes = [], 
     if (typeof appWriteDraft === 'function') appWriteDraft('jornada', currentUser?.uid, { form });
   }, [form, currentUser?.uid]);
 
-  const seleccionarZona = id => {
-    const zona = zonasDisponibles.find(z => z.id === id);
-    const vehiculo = resolverVehiculoOperativo({ zona, vehiculos });
-    const medidor = resolverMedidorOperativo({ zona, vehiculo, medidores, medicion });
+  const seleccionarLocalidad = id => {
+    const localidad = localidadesDisponibles.find(l => l.id === id);
+    const vehiculo = resolverVehiculoOperativo({ localidad, vehiculos });
+    const medidor = resolverMedidorOperativo({ localidad, vehiculo, medidores, medicion });
     setForm(f => ({
       ...f,
-      zonaId: id,
-      vehiculo: vehiculo.nombre || zona?.vehiculo || '',
-      vehiculoId: vehiculo.id || zona?.vehiculoId || '',
-      vehiculoNombre: vehiculo.nombre || zona?.vehiculoNombre || zona?.vehiculo || '',
-      medidorId: medidor.id || zona?.medidorId || '',
-      medidorNombre: medidor.nombre || zona?.medidorNombre || '',
+      localidadId: id,
+      localidadNombre: localidad?.nombre || '',
+      vehiculo: vehiculo.nombre || '',
+      vehiculoId: vehiculo.id || '',
+      vehiculoNombre: vehiculo.nombre || '',
+      medidorId: medidor.id || '',
+      medidorNombre: medidor.nombre || '',
       lecturaInicial: '',
       aguaCargadaLitros: ''
     }));
@@ -58,11 +68,12 @@ function JornadaMedidor({ zonas = [], jornadas = [], notas = [], clientes = [], 
     const inicio = Number(form.lecturaInicial);
     const aguaCargadaLitros = Number(form.aguaCargadaLitros);
     if (jornadaAbierta) return flash('Ya existe una jornada abierta; ciérrala antes de iniciar otra');
-    if (jornadaVehiculoAbierta) return flash('Ese vehículo o medidor ya está ocupado por otra jornada abierta');
+    if (jornadaLocalidadAbierta) return flash('El vehículo, medidor o localidad ya está ocupado por otra jornada abierta');
     if (medicion && (medicion.unidadActivo === false || medicion.medidorActivo === false)) return flash('La configuración de medición está inactiva; solicita a ADMIN que la habilite');
-    const vehiculo = resolverVehiculoOperativo({ jornada: form, zona: zonaActual, vehiculos });
-    const medidor = resolverMedidorOperativo({ jornada: form, zona: zonaActual, vehiculo, medidores, medicion });
-    if (!form.zonaId || !vehiculo.id || !medidor.id) return flash('La zona no tiene vehículo y medidor configurados; solicita a ADMIN completar la asignación');
+    const localidad = localidadActual || buscarLocalidadOperativa({ localidades: localidadesDisponibles, localidadId: form.localidadId, localidadNombre: form.localidadNombre });
+    const vehiculo = resolverVehiculoOperativo({ jornada: form, localidad, vehiculos });
+    const medidor = resolverMedidorOperativo({ jornada: form, localidad, vehiculo, medidores, medicion });
+    if (!localidad?.id || !vehiculo.id || !medidor.id) return flash('La localidad no tiene repartidor, vehículo y medidor configurados; solicita a ADMIN completar la asignación');
     if (!Number.isFinite(inicio) || inicio < 0) return flash('Captura una lectura inicial válida');
     if (!Number.isFinite(aguaCargadaLitros) || aguaCargadaLitros <= 0) return flash('Captura los litros de agua cargados');
     if (lecturaAnterior !== null && inicio < Number(lecturaAnterior)) return flash('La lectura inicial no puede ser menor que la última lectura registrada');
@@ -73,7 +84,7 @@ function JornadaMedidor({ zonas = [], jornadas = [], notas = [], clientes = [], 
       const escribirInicio = tx => {
         tx.set(jornadaRef, {
           estado: 'abierta', repartidorId: currentUser.uid, repartidorNombre: currentUser.nombre || '',
-          zonaId: form.zonaId, zonaNombre: zonaActual?.nombre || '', vehiculo: vehiculo.nombre, vehiculoId: vehiculo.id, vehiculoNombre: vehiculo.nombre, medidorId: medidor.id, medidorNombre: medidor.nombre,
+          localidadId: localidad.id, localidadNombre: localidad.nombre || '', localidad: localidad.nombre || '', vehiculo: vehiculo.nombre, vehiculoId: vehiculo.id, vehiculoNombre: vehiculo.nombre, medidorId: medidor.id, medidorNombre: medidor.nombre,
           lecturaAnterior: lecturaAnterior === null ? null : Number(lecturaAnterior), lecturaInicial: inicio, lecturaActual: inicio, lecturaCalculadaActual: inicio,
           aguaCargadaLitros, aguaDisponibleLitros: aguaCargadaLitros, litrosMedidos: null, litrosVendidos: 0, litrosVendidosAcumulados: 0, otrasSalidasLitros: 0, diferenciaLitros: null,
           unidadComercial, litrosPorUnidad, incrementoContadorPorUnidad, precioPorUnidad, medidorDigitos: medidor.digitos, medidorLitrosPorIncremento: medidor.litrosPorIncremento, creadoOffline: typeof navigator !== 'undefined' && !navigator.onLine
@@ -81,13 +92,13 @@ function JornadaMedidor({ zonas = [], jornadas = [], notas = [], clientes = [], 
         tx.set(lecturaInicialRef, {
           jornadaId: jornadaRef.id, tipo: 'inicial', lecturaFisica: true, valor: inicio, valorAnterior: lecturaAnterior === null ? null : Number(lecturaAnterior),
           fechaHora: fechaInicio, usuarioUid: currentUser.uid, usuarioNombre: currentUser.nombre || '',
-          vehiculo: vehiculo.nombre, vehiculoId: vehiculo.id, vehiculoNombre: vehiculo.nombre, medidorId: medidor.id, medidorNombre: medidor.nombre, medidorDigitos: medidor.digitos, medidorLitrosPorIncremento: medidor.litrosPorIncremento, zonaId: form.zonaId, operacion: 'apertura_jornada'
+          localidadId: localidad.id, localidadNombre: localidad.nombre || '', vehiculo: vehiculo.nombre, vehiculoId: vehiculo.id, vehiculoNombre: vehiculo.nombre, medidorId: medidor.id, medidorNombre: medidor.nombre, medidorDigitos: medidor.digitos, medidorLitrosPorIncremento: medidor.litrosPorIncremento, operacion: 'apertura_jornada'
         });
       };
       if (typeof navigator !== 'undefined' && navigator.onLine) await db.runTransaction(async tx => escribirInicio(tx));
       else { const batch = db.batch(); escribirInicio(batch); await batch.commit(); }
       if (typeof appClearDraft === 'function') appClearDraft('jornada', currentUser?.uid);
-      setForm({ zonaId: '', vehiculoId: '', vehiculo: '', vehiculoNombre: '', medidorId: '', medidorNombre: '', lecturaInicial: '', aguaCargadaLitros: '' });
+      setForm({ localidadId: '', localidadNombre: '', vehiculoId: '', vehiculo: '', vehiculoNombre: '', medidorId: '', medidorNombre: '', lecturaInicial: '', aguaCargadaLitros: '' });
       flash('Jornada iniciada');
     } catch (e) { flash('No se pudo iniciar la jornada: ' + e.message); }
   };
@@ -160,8 +171,8 @@ function JornadaMedidor({ zonas = [], jornadas = [], notas = [], clientes = [], 
         });
         tx.set(lecturaFinalRef, {
           jornadaId: jornadaAbierta.id, tipo: 'final', lecturaFisica: true, valor: final, lecturaCalculadaFinal, fechaHora: fechaCierre,
-          usuarioUid: currentUser.uid, usuarioNombre: currentUser.nombre || '',           vehiculo: jornadaAbierta.vehiculo || '', vehiculoId: jornadaAbierta.vehiculoId || jornadaAbierta.vehiculo || '', vehiculoNombre: jornadaAbierta.vehiculoNombre || jornadaAbierta.vehiculo || '',
-          medidorId: jornadaAbierta.medidorId || '', medidorNombre: jornadaAbierta.medidorNombre || '', medidorDigitos: jornadaAbierta.medidorDigitos ?? null, medidorLitrosPorIncremento: jornadaAbierta.medidorLitrosPorIncremento ?? null, zonaId: jornadaAbierta.zonaId || '', operacion: 'cierre_jornada'
+          usuarioUid: currentUser.uid, usuarioNombre: currentUser.nombre || '', localidadId: jornadaAbierta.localidadId || '', localidadNombre: jornadaAbierta.localidadNombre || jornadaAbierta.localidad || '', vehiculo: jornadaAbierta.vehiculo || '', vehiculoId: jornadaAbierta.vehiculoId || jornadaAbierta.vehiculo || '', vehiculoNombre: jornadaAbierta.vehiculoNombre || jornadaAbierta.vehiculo || '',
+          medidorId: jornadaAbierta.medidorId || '', medidorNombre: jornadaAbierta.medidorNombre || '', medidorDigitos: jornadaAbierta.medidorDigitos ?? null, medidorLitrosPorIncremento: jornadaAbierta.medidorLitrosPorIncremento ?? null, operacion: 'cierre_jornada'
         });
       };
       if (typeof navigator !== 'undefined' && navigator.onLine) await db.runTransaction(async tx => escribirCierre(tx));
@@ -170,15 +181,15 @@ function JornadaMedidor({ zonas = [], jornadas = [], notas = [], clientes = [], 
       flash(`Jornada cerrada. Físico: ${litrosMedidos.toFixed(2)} L · Calculado por ventas: ${litrosCalculadosPorVentas.toFixed(2)} L · Diferencia: ${diferenciaLitros.toFixed(2)} L`);
     } catch (e) { flash('No se pudo cerrar la jornada: ' + e.message); }
   };
-  if (currentUser.role === 'admin') return React.createElement('div', { className: 'fx-page-jornada-admin', style: { padding: '16px 12px' } }, React.createElement('div', { style: { fontSize: 21, fontWeight: 800, marginBottom: 4 } }, 'Conciliación de jornadas'), React.createElement('div', { style: { color: 'var(--ink-soft)', fontSize: 12, lineHeight: 1.45, marginBottom: 14 } }, 'Consulta lecturas, litros medidos, ventas registradas y diferencias pendientes de explicación.'), (jornadas || []).filter(j => j.estado === 'cerrada').map(j => React.createElement('div', { key: j.id, style: { background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, padding: 13, marginBottom: 9 } }, React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', gap: 8 } }, React.createElement('strong', null, j.zonaNombre || 'Sin zona'), React.createElement('span', { style: { color: Number(j.diferenciaLitros || 0) === 0 ? 'var(--ok-text)' : 'var(--danger-text)', fontWeight: 800, fontSize: 12 } }, Number(j.diferenciaLitros || 0).toFixed(2), ' L diferencia')), React.createElement('div', { style: { color: 'var(--ink-soft)', fontSize: 11, marginTop: 5 } }, j.repartidorNombre || 'Sin repartidor', ' · 🚚 ', j.vehiculo || 'Sin vehículo', ' · Medidor ', j.medidorId || '—'), React.createElement('div', { style: { fontSize: 12, marginTop: 8 } }, 'Inicial ', j.lecturaInicial, ' → Final físico ', j.lecturaFinal, ' · Calculada ', Number(j.lecturaCalculadaFinal ?? j.lecturaActual ?? 0).toFixed(2), ' · Diferencia física ', Number(j.diferenciaContador || 0).toFixed(2), ' contador · Físico ', Number(j.litrosMedidos || 0).toFixed(2), ' L · Ventas calculadas ', Number(j.litrosCalculadosPorVentas ?? j.litrosVendidos ?? 0).toFixed(2), ' L · Otras salidas ', Number(j.otrasSalidasLitros || 0).toFixed(2), ' L'), j.resumenTarifas?.length > 0 && React.createElement('div', { style: { marginTop: 9, padding: 9, background: 'var(--surface-2)', borderRadius: 8 } }, React.createElement('div', { style: { fontSize: 10, fontWeight: 800, color: 'var(--ink-faint)', letterSpacing: '.06em', marginBottom: 5 } }, 'VENTAS POR TARIFA'), j.resumenTarifas.map((t, i) => React.createElement('div', { key: t.tarifaId || i, style: { borderTop: i ? '1px solid var(--line)' : 'none', padding: '6px 0', fontSize: 11 } }, React.createElement('strong', null, t.tarifaNombre || 'Tarifa'), ' · ', Number(t.unidades || 0).toFixed(2), ' unidades · ', Number(t.litros || 0).toFixed(2), ' L · $', Number(t.precioUnitario || 0).toFixed(2), ' · Subtotal $', Number(t.subtotal || 0).toFixed(2), ' · Efectivo $', Number(t.efectivo || 0).toFixed(2), ' · Crédito $', Number(t.credito || 0).toFixed(2)))), React.createElement('input', { type: 'number', min: 0, step: 0.01, defaultValue: j.otrasSalidasLitros || 0, placeholder: 'Otras salidas autorizadas (L)', onBlur: e => actualizarOtrasSalidas(j, e.target.value), style: { width: '100%', marginTop: 8, padding: 8, boxSizing: 'border-box', borderRadius: 7, border: '1px solid var(--line-strong)', background: 'var(--surface)', color: 'var(--ink)', fontSize: 11 } }), React.createElement('input', { defaultValue: j.explicacionDiferencia || '', placeholder: 'Explicación de diferencia', onBlur: e => db.collection('jornadas').doc(j.id).update({ explicacionDiferencia: e.target.value.trim(), explicadoPorUid: currentUser.uid, explicadoEn: new Date().toISOString() }), style: { width: '100%', marginTop: 8, padding: 8, boxSizing: 'border-box', borderRadius: 7, border: '1px solid var(--line-strong)', background: 'var(--surface)', color: 'var(--ink)', fontSize: 11 } }))), (jornadas || []).filter(j => j.estado === 'cerrada').length === 0 && React.createElement('div', { style: { color: 'var(--ink-faint)', fontSize: 12 } }, 'No hay jornadas cerradas para conciliar todavía.'));
+  if (currentUser.role === 'admin') return React.createElement('div', { className: 'fx-page-jornada-admin', style: { padding: '16px 12px' } }, React.createElement('div', { style: { fontSize: 21, fontWeight: 800, marginBottom: 4 } }, 'Conciliación de jornadas'), React.createElement('div', { style: { color: 'var(--ink-soft)', fontSize: 12, lineHeight: 1.45, marginBottom: 14 } }, 'Consulta lecturas, litros medidos, ventas registradas y diferencias pendientes de explicación.'), (jornadas || []).filter(j => j.estado === 'cerrada').map(j => React.createElement('div', { key: j.id, style: { background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, padding: 13, marginBottom: 9 } }, React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', gap: 8 } }, React.createElement('strong', null, j.localidadNombre || j.localidad || 'Sin localidad'), React.createElement('span', { style: { color: Number(j.diferenciaLitros || 0) === 0 ? 'var(--ok-text)' : 'var(--danger-text)', fontWeight: 800, fontSize: 12 } }, Number(j.diferenciaLitros || 0).toFixed(2), ' L diferencia')), React.createElement('div', { style: { color: 'var(--ink-soft)', fontSize: 11, marginTop: 5 } }, j.repartidorNombre || 'Sin repartidor', ' · ', j.vehiculo || 'Sin vehículo', ' · Medidor ', j.medidorId || '—'), React.createElement('div', { style: { fontSize: 12, marginTop: 8 } }, 'Inicial ', j.lecturaInicial, ' → Final físico ', j.lecturaFinal, ' · Calculada ', Number(j.lecturaCalculadaFinal ?? j.lecturaActual ?? 0).toFixed(2), ' · Diferencia física ', Number(j.diferenciaContador || 0).toFixed(2), ' contador · Físico ', Number(j.litrosMedidos || 0).toFixed(2), ' L · Ventas calculadas ', Number(j.litrosCalculadosPorVentas ?? j.litrosVendidos ?? 0).toFixed(2), ' L · Otras salidas ', Number(j.otrasSalidasLitros || 0).toFixed(2), ' L'), j.resumenTarifas?.length > 0 && React.createElement('div', { style: { marginTop: 9, padding: 9, background: 'var(--surface-2)', borderRadius: 8 } }, React.createElement('div', { style: { fontSize: 10, fontWeight: 800, color: 'var(--ink-faint)', letterSpacing: '.06em', marginBottom: 5 } }, 'VENTAS POR TARIFA'), j.resumenTarifas.map((t, i) => React.createElement('div', { key: t.tarifaId || i, style: { borderTop: i ? '1px solid var(--line)' : 'none', padding: '6px 0', fontSize: 11 } }, React.createElement('strong', null, t.tarifaNombre || 'Tarifa'), ' · ', Number(t.unidades || 0).toFixed(2), ' unidades · ', Number(t.litros || 0).toFixed(2), ' L · $', Number(t.precioUnitario || 0).toFixed(2), ' · Subtotal $', Number(t.subtotal || 0).toFixed(2), ' · Efectivo $', Number(t.efectivo || 0).toFixed(2), ' · Crédito $', Number(t.credito || 0).toFixed(2)))), React.createElement('input', { type: 'number', min: 0, step: 0.01, defaultValue: j.otrasSalidasLitros || 0, placeholder: 'Otras salidas autorizadas (L)', onBlur: e => actualizarOtrasSalidas(j, e.target.value), style: { width: '100%', marginTop: 8, padding: 8, boxSizing: 'border-box', borderRadius: 7, border: '1px solid var(--line-strong)', background: 'var(--surface)', color: 'var(--ink)', fontSize: 11 } }), React.createElement('input', { defaultValue: j.explicacionDiferencia || '', placeholder: 'Explicación de diferencia', onBlur: e => db.collection('jornadas').doc(j.id).update({ explicacionDiferencia: e.target.value.trim(), explicadoPorUid: currentUser.uid, explicadoEn: new Date().toISOString() }), style: { width: '100%', marginTop: 8, padding: 8, boxSizing: 'border-box', borderRadius: 7, border: '1px solid var(--line-strong)', background: 'var(--surface)', color: 'var(--ink)', fontSize: 11 } }))), (jornadas || []).filter(j => j.estado === 'cerrada').length === 0 && React.createElement('div', { style: { color: 'var(--ink-faint)', fontSize: 12 } }, 'No hay jornadas cerradas para conciliar todavía.'));
   return React.createElement('div', { className: 'fx-page-jornada', style: { padding: '16px 12px' } },
     React.createElement('div', { style: { fontSize: 21, fontWeight: 800, marginBottom: 4 } }, 'Jornada y medidor'),
     React.createElement('div', { style: { color: 'var(--ink-soft)', fontSize: 12, lineHeight: 1.45, marginBottom: 14 } }, 'La lectura anterior es solo lectura. El repartidor captura cantidad comercial por cliente; el sistema calcula la lectura acumulada. Solo se capturan físicamente las lecturas inicial y final, y el cierre compara el final físico contra el cálculo de ventas.'),
     mensaje && React.createElement('div', { style: { background: 'var(--ok-bg)', color: 'var(--ok-text)', borderRadius: 9, padding: 10, fontSize: 12, fontWeight: 700, marginBottom: 12 } }, mensaje),
     jornadaAbierta ? React.createElement('div', { style: { background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, padding: 14 } },
       React.createElement('div', { style: { fontSize: 11, color: 'var(--ink-faint)', fontWeight: 800 } }, 'JORNADA ABIERTA'),
-      React.createElement('div', { style: { fontSize: 18, fontWeight: 800, margin: '5px 0' } }, jornadaAbierta.zonaNombre || 'Zona'),
-      React.createElement('div', { style: { color: 'var(--ink-soft)', fontSize: 12, marginBottom: 5 } }, '🚚 ', jornadaAbierta.vehiculoNombre || jornadaAbierta.vehiculo || jornadaAbierta.vehiculoId || '—', ' · Medidor: ', jornadaAbierta.medidorNombre || jornadaAbierta.medidorId || '—'),
+      React.createElement('div', { style: { fontSize: 18, fontWeight: 800, margin: '5px 0' } }, jornadaAbierta.localidadNombre || jornadaAbierta.localidad || 'Localidad'),
+      React.createElement('div', { style: { color: 'var(--ink-soft)', fontSize: 12, marginBottom: 5 } }, 'Vehículo: ', jornadaAbierta.vehiculoNombre || jornadaAbierta.vehiculo || jornadaAbierta.vehiculoId || '—', ' · Medidor: ', jornadaAbierta.medidorNombre || jornadaAbierta.medidorId || '—'),
       React.createElement('div', { style: { color: 'var(--ink-soft)', fontSize: 12, marginBottom: 12 } }, 'Escala: 1 ', jornadaAbierta.unidadComercial || unidadComercial, ' = ', Number(jornadaAbierta.litrosPorUnidad || litrosPorUnidad).toFixed(2), ' L y +', Number(jornadaAbierta.incrementoContadorPorUnidad || incrementoContadorPorUnidad).toFixed(4), ' contador físico'),
       React.createElement('div', { style: { color: 'var(--ink-soft)', fontSize: 12, marginBottom: 8 } }, 'Lectura anterior: ', jornadaAbierta.lecturaAnterior ?? 'Sin registro', ' · Inicial: ', jornadaAbierta.lecturaInicial),
       React.createElement('div', { style: { background: 'var(--surface-2)', borderRadius: 9, padding: 10, marginBottom: 10 } },
@@ -194,13 +205,14 @@ function JornadaMedidor({ zonas = [], jornadas = [], notas = [], clientes = [], 
       React.createElement('input', { value: lecturaFinal, onChange: e => setLecturaFinal(e.target.value), inputMode: 'decimal', placeholder: 'Lectura final del medidor', style: { width: '100%', padding: 12, boxSizing: 'border-box', borderRadius: 9, border: '1px solid var(--line-strong)', background: 'var(--surface)', color: 'var(--ink)', marginBottom: 10 } }),
       React.createElement('button', { onClick: cerrar, style: { width: '100%', padding: 14, border: 0, borderRadius: 9, background: 'var(--accent)', color: 'var(--ink)', fontWeight: 800 } }, 'Cerrar jornada y conciliar'),
       React.createElement('div', { style: { marginTop: 18, fontSize: 12, fontWeight: 800 } }, 'CLIENTES ASIGNADOS'),
-      clientesJornada.length ? clientesJornada.map(c => React.createElement('div', { key: c.id, style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '10px 0', borderBottom: '1px solid var(--line)' } }, React.createElement('div', null, React.createElement('strong', { style: { fontSize: 13 } }, c.nombre || 'Cliente'), React.createElement('div', { style: { color: 'var(--ink-soft)', fontSize: 11 } }, 'ID ', c.identificacion || c.id, ' · ', c.localidad || c.domicilio || 'Zona asignada')), clientesAtendidos.has(c.id) ? React.createElement('span', { style: { color: 'var(--ok-text)', fontWeight: 800, fontSize: 11 } }, '✓ Atendido') : React.createElement('button', { onClick: () => onIrA && onIrA('ruta'), style: { border: 0, borderRadius: 8, padding: '9px 12px', background: 'var(--accent)', color: 'var(--ink)', fontWeight: 800, fontSize: 11 } }, 'Vender'))) : React.createElement('div', { style: { color: 'var(--ink-faint)', fontSize: 12, padding: '10px 0' } }, 'No hay clientes asignados a esta jornada.')
+      clientesJornada.length ? clientesJornada.map(c => React.createElement('div', { key: c.id, style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '10px 0', borderBottom: '1px solid var(--line)' } }, React.createElement('div', null, React.createElement('strong', { style: { fontSize: 13 } }, c.nombre || 'Cliente'), React.createElement('div', { style: { color: 'var(--ink-soft)', fontSize: 11 } }, 'ID ', c.identificacion || c.id, ' · ', c.localidadNombre || c.localidad || c.domicilio || 'Localidad asignada')), clientesAtendidos.has(c.id) ? React.createElement('span', { style: { color: 'var(--ok-text)', fontWeight: 800, fontSize: 11 } }, '✓ Atendido') : React.createElement('button', { onClick: () => onIrA && onIrA('ruta'), style: { border: 0, borderRadius: 8, padding: '9px 12px', background: 'var(--accent)', color: 'var(--ink)', fontWeight: 800, fontSize: 11 } }, 'Vender'))) : React.createElement('div', { style: { color: 'var(--ink-faint)', fontSize: 12, padding: '10px 0' } }, 'No hay clientes asignados a esta localidad.')
     ) : React.createElement('div', { style: { background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, padding: 14 } },
       React.createElement('div', { style: { fontSize: 12, fontWeight: 800, marginBottom: 10 } }, 'INICIAR JORNADA'),
-      React.createElement('select', { value: form.zonaId, onChange: e => seleccionarZona(e.target.value), style: { width: '100%', padding: 11, marginBottom: 9, borderRadius: 8, border: '1px solid var(--line-strong)', background: 'var(--surface)', color: 'var(--ink)' } }, React.createElement('option', { value: '' }, 'Selecciona zona'), zonasDisponibles.map(z => React.createElement('option', { key: z.id, value: z.id }, z.nombre))),
+      React.createElement('select', { value: form.localidadId, onChange: e => seleccionarLocalidad(e.target.value), style: { width: '100%', padding: 11, marginBottom: 9, borderRadius: 8, border: '1px solid var(--line-strong)', background: 'var(--surface)', color: 'var(--ink)' } }, React.createElement('option', { value: '' }, 'Selecciona localidad'), localidadesDisponibles.map(localidad => React.createElement('option', { key: localidad.id, value: localidad.id }, localidad.nombre))),
       React.createElement('div', { style: { background: 'var(--surface-2)', padding: 9, borderRadius: 8, fontSize: 11, marginBottom: 9 } }, 'Última lectura registrada: ', lecturaAnterior === null ? 'Sin registro' : lecturaAnterior, ' (solo lectura)'),
-      React.createElement('div', { style: { background: 'var(--surface-2)', padding: 9, borderRadius: 8, fontSize: 12, marginBottom: 9 } }, 'Vehículo asignado: ', form.vehiculoNombre || form.vehiculo || 'Selecciona una zona', ' · ID: ', form.vehiculoId || 'pendiente'),
-      React.createElement('div', { style: { background: 'var(--surface-2)', padding: 9, borderRadius: 8, fontSize: 12, marginBottom: 9 } }, 'Medidor asociado: ', form.medidorNombre || form.medidorId || 'Selecciona una zona', ' · ID: ', form.medidorId || 'pendiente'),
+      React.createElement('div', { style: { background: 'var(--surface-2)', padding: 9, borderRadius: 8, fontSize: 12, marginBottom: 9 } }, 'Localidad asignada: ', form.localidadNombre || localidadActual?.nombre || 'Selecciona una localidad', ' · ID: ', form.localidadId || 'pendiente'),
+      React.createElement('div', { style: { background: 'var(--surface-2)', padding: 9, borderRadius: 8, fontSize: 12, marginBottom: 9 } }, 'Vehículo asignado: ', form.vehiculoNombre || form.vehiculo || 'Selecciona una localidad', ' · ID: ', form.vehiculoId || 'pendiente'),
+      React.createElement('div', { style: { background: 'var(--surface-2)', padding: 9, borderRadius: 8, fontSize: 12, marginBottom: 9 } }, 'Medidor asociado: ', form.medidorNombre || form.medidorId || 'Selecciona una localidad', ' · ID: ', form.medidorId || 'pendiente'),
       React.createElement('div', { style: { background: 'var(--info-bg)', padding: 9, borderRadius: 8, fontSize: 11, marginBottom: 9, color: 'var(--info-text)' } }, 'Escala física: ', medidorActual.digitos, ' dígitos · el sexto dígito incrementa cada ', medidorActual.litrosPorIncremento, ' L'),
       React.createElement('input', { value: form.lecturaInicial, onChange: e => setForm(f => ({ ...f, lecturaInicial: e.target.value })), inputMode: 'decimal', placeholder: 'Lectura inicial física del medidor', style: { width: '100%', padding: 11, boxSizing: 'border-box', borderRadius: 8, border: '1px solid var(--line-strong)', background: 'var(--surface)', color: 'var(--ink)', marginBottom: 10 } }),
       React.createElement('input', { value: form.aguaCargadaLitros, onChange: e => setForm(f => ({ ...f, aguaCargadaLitros: e.target.value })), inputMode: 'decimal', type: 'number', min: 0.01, step: 0.01, placeholder: 'Litros cargados en el vehículo', style: { width: '100%', padding: 11, boxSizing: 'border-box', borderRadius: 8, border: '1px solid var(--line-strong)', background: 'var(--surface)', color: 'var(--ink)', marginBottom: 10 } }),

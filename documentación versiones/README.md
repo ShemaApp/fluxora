@@ -21,6 +21,7 @@ Esta carpeta concentra **todos los archivos Markdown del proyecto**. La document
 | `08_configuracion_admin_repartidor` | Auditoría de configuración ADMIN y dependencias reales del REPARTIDOR. | Confirmar qué configura ADMIN y qué valores consume Jornada, Ruta, venta, caja y conciliación. |
 | `09_referencias_repartidor` | Resolución de vehículos y medidores por referencias separadas en Jornada, Ruta y ventas offline. | Revisar IDs, snapshots, continuidad de lectura y compatibilidad con zonas históricas. |
 | `10_flujo_desarrollo` | Procedimiento de desarrollo, validación, publicación incremental y reversión. | Confirmar cómo se publica cada bloque de prueba y cómo localizar o revertir un fallo. |
+| `11_migracion_localidad` | Sustitución completa de zona por localidad como unidad de asignación del REPARTIDOR. | Revisar localidadId, asignaciones a repartidores, filtros de clientes y compatibilidad histórica. |
 
 ## Especificación fuente
 
@@ -58,4 +59,4 @@ Cada nueva carpeta debe indicar qué cambió, qué no cambió, cómo se validó,
 
 ## Estado actual
 
-La documentación existente fue reubicada desde la raíz del proyecto. También se incorporó una copia de `pantallas.md` como especificación fuente dentro de `00_especificacion_fuente`. La versión `07_pwa_iconos` documenta la conversión del símbolo FLUXORA a iconos PWA y la actualización del manifest y la caché. La versión `08_configuracion_admin_repartidor` conserva la auditoría de dependencias, la versión `09_referencias_repartidor` documenta el contrato consumido por el REPARTIDOR y la versión `10_flujo_desarrollo` define la publicación incremental para pruebas. No se modificaron los contenidos históricos de los documentos al moverlos.
+La documentación existente fue reubicada desde la raíz del proyecto. También se incorporó una copia de `pantallas.md` como especificación fuente dentro de `00_especificacion_fuente`. La versión `07_pwa_iconos` documenta la conversión del símbolo FLUXORA a iconos PWA y la actualización del manifest y la caché. La versión `08_configuracion_admin_repartidor` conserva la auditoría de dependencias, la versión `09_referencias_repartidor` documenta el contrato consumido por el REPARTIDOR, la versión `10_flujo_desarrollo` define la publicación incremental para pruebas y la versión `11_migracion_localidad` establece localidad como unidad operativa. No se modificaron los contenidos históricos de los documentos al moverlos.

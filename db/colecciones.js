@@ -2,15 +2,17 @@
    Carga DESPUÉS de firebase-init.js y ANTES de db/semillas.js.
 
    Nota de alcance: este archivo centraliza las colecciones consumidas por
-   los módulos nuevos y por el contexto operativo. Las colecciones de
-   vehículos y medidores son referencias separadas; el resto de los módulos
-   legacy todavía usa algunos nombres literales (db.collection('productos'),
-   etc.) para conservar compatibilidad. */
+   los módulos nuevos y por el contexto operativo. Localidad es la unidad de
+   asignación; la colección histórica de zonas se conserva únicamente como
+   referencia de compatibilidad. Vehículos y medidores son referencias separadas;
+   el resto de los módulos legacy todavía usa algunos nombres literales para
+   conservar compatibilidad. */
 const COLECCIONES = {
   PRODUCTOS: 'productos',
   CLIENTES: 'clientes',
   LOCALIDADES: 'localidades',
-  ZONAS: 'zonas',
+  // Solo para compatibilidad con documentos históricos; no se consume en la UI nueva.
+  ZONAS_LEGACY: 'zonas',
   NOTAS: 'notas',
   PEDIDOS: 'pedidos',
   CREDITOS: 'creditos',

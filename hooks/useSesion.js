@@ -11,7 +11,7 @@ function useSesion() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [productos, setProductos] = useState([]);
   const [clientes, setClientes] = useState([]);
-  const [zonas, setZonas] = useState([]);
+  const [localidades, setLocalidades] = useState([]);
   const [notas, setNotas] = useState([]);
   const [creditos, setCreditos] = useState([]);
   const [rutas, setRutas] = useState([]);
@@ -24,7 +24,7 @@ function useSesion() {
   const [pendCounts, setPendCounts] = useState({
     productos: 0,
     clientes: 0,
-    zonas: 0,
+    localidades: 0,
     notas: 0,
     creditos: 0,
     rutas: 0,
@@ -167,9 +167,10 @@ function useSesion() {
     const pedidosQuery = currentUser.role === 'repartidor'
       ? db.collection(COLECCIONES.PEDIDOS).where('repartidorId', '==', currentUser.uid)
       : db.collection(COLECCIONES.PEDIDOS).orderBy('fechaCreacion', 'desc').limit(500);
-    const clientesQuery = currentUser.role === 'repartidor'
-      ? db.collection(COLECCIONES.CLIENTES).where('zonaChoferId', '==', currentUser.uid)
-      : db.collection(COLECCIONES.CLIENTES);
+    // La localidad es ahora el alcance operativo. Se carga el catálogo y los
+    // clientes para filtrar por las localidades asignadas al repartidor en UI;
+    // las reglas específicas de localidad se habilitarán en su iteración propia.
+    const clientesQuery = db.collection(COLECCIONES.CLIENTES);
     const jornadasQuery = currentUser.role === 'repartidor'
       ? db.collection(COLECCIONES.JORNADAS).where('repartidorId', '==', currentUser.uid)
       : currentUser.role === 'admin'
@@ -214,13 +215,13 @@ function useSesion() {
         ...d.data()
       })));
       pend('clientes', snap);
-    }, errorHandler), db.collection(COLECCIONES.ZONAS).onSnapshot({
+    }, errorHandler), db.collection(COLECCIONES.LOCALIDADES).onSnapshot({
       includeMetadataChanges: true
     }, snap => {
       const lista = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       lista.sort((a, b) => String(a.nombre || '').localeCompare(String(b.nombre || ''), 'es'));
-      setZonas(lista);
-      pend('zonas', snap);
+      setLocalidades(lista);
+      pend('localidades', snap);
     }, errorHandler), db.collection(COLECCIONES.NOTAS).orderBy('fecha', 'desc').limit(500).onSnapshot({
       includeMetadataChanges: true
     }, snap => {
@@ -267,7 +268,7 @@ function useSesion() {
     currentUser, authChecked, firestoreError,
     locked, setLocked,
     isOnline,
-    productos, clientes, zonas, notas, creditos, rutas, jornadas, medicion, tarifas, vehiculos, medidores, pedidos,
+    productos, clientes, localidades, notas, creditos, rutas, jornadas, medicion, tarifas, vehiculos, medidores, pedidos,
     pendCounts, totalPendientes, notificacionesTransferencias,
   };
 }

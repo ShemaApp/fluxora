@@ -2,7 +2,7 @@ function FlujoChoferRapido({
   productos = [],
   clientes = [],
   rutas = [],
-  zonas = [],
+  localidades = [],
   jornadas = [],
   medicion = null,
   tarifas = [],
@@ -28,13 +28,13 @@ function FlujoChoferRapido({
 
   const ruta = (rutas || []).find(r => r.estado === 'activa' && (currentUser.role === 'admin' || r.repartidorId === currentUser.uid)) || null;
   const jornadaActiva = (jornadas || []).find(j => j.estado === 'abierta' && j.repartidorId === currentUser.uid);
-  const zonasAsignadas = (zonas || []).filter(z => z.activo !== false && (z.choferId === currentUser.uid || z.repartidorId === currentUser.uid));
-  const zonaDeRuta = ruta?.zonaId ? zonasAsignadas.find(z => z.id === ruta.zonaId) : zonasAsignadas.find(z => String(z.nombre || '').toLowerCase() === String(ruta?.zona || '').toLowerCase());
-  const zonasDeTrabajo = zonaDeRuta ? [zonaDeRuta] : zonasAsignadas;
-  const zonaIds = new Set(zonasDeTrabajo.map(z => z.id));
-  const zona = zonasDeTrabajo.map(z => z.nombre).join(', ') || ruta?.zona || 'Ruta del día';
-  const vehiculoRuta = resolverVehiculoOperativo({ jornada: jornadaActiva, zona: zonaDeRuta, vehiculos });
-  const medidorRuta = resolverMedidorOperativo({ jornada: jornadaActiva, zona: zonaDeRuta, vehiculo: vehiculoRuta, medidores, medicion });
+  const localidadesAsignadas = obtenerLocalidadesAsignadas({ localidades, currentUser, localidadIds: currentUser.localidadIds });
+  const localidadDeRuta = jornadaActiva?.localidadId ? localidadesAsignadas.find(l => l.id === jornadaActiva.localidadId) : ruta?.localidadId ? localidadesAsignadas.find(l => l.id === ruta.localidadId) : localidadesAsignadas.find(l => String(l.nombre || '').toLowerCase() === String(ruta?.localidad || '').toLowerCase());
+  const localidadesDeTrabajo = localidadDeRuta ? [localidadDeRuta] : localidadesAsignadas;
+  const localidadIds = new Set(localidadesDeTrabajo.map(l => l.id));
+  const localidad = localidadesDeTrabajo.map(l => l.nombre).join(', ') || jornadaActiva?.localidadNombre || ruta?.localidad || 'Ruta del día';
+  const vehiculoRuta = resolverVehiculoOperativo({ jornada: jornadaActiva, localidad: localidadDeRuta, vehiculos });
+  const medidorRuta = resolverMedidorOperativo({ jornada: jornadaActiva, localidad: localidadDeRuta, vehiculo: vehiculoRuta, medidores, medicion });
   const vehiculoIdRuta = vehiculoRuta.id || jornadaActiva?.vehiculoId || '';
   const medidorIdRuta = medidorRuta.id || jornadaActiva?.medidorId || '';
   const vehiculoNombreRuta = vehiculoRuta.nombre || jornadaActiva?.vehiculoNombre || jornadaActiva?.vehiculo || vehiculoIdRuta || 'Pendiente';
@@ -111,10 +111,10 @@ function FlujoChoferRapido({
     if (jornadaIdRuta !== jornadaActiva.id) setJornadaIdRuta(jornadaActiva.id);
   }, [borradorListo, jornadaActiva?.id, jornadaActiva?.lecturaActual, jornadaActiva?.lecturaCalculadaActual, jornadaActiva?.lecturaInicial, jornadaActiva?.aguaDisponibleLitros, jornadaActiva?.aguaCargadaLitros, jornadaIdRuta, lecturaActualRuta, aguaDisponibleRuta]);
 
-  const clientesZona = (clientes || []).filter(c => c.activo !== false && zonaIds.size > 0 && zonaIds.has(c.zonaId));
-  const clientesFiltrados = clientesZona.filter(c => {
+  const clientesLocalidad = (clientes || []).filter(c => c.activo !== false && localidadIds.size > 0 && (localidadIds.has(c.localidadId) || (!c.localidadId && localidadesDeTrabajo.some(l => String(l.nombre || '').trim().toLowerCase() === String(c.localidadNombre || c.localidad || c.domicilio || '').trim().toLowerCase()))));
+  const clientesFiltrados = clientesLocalidad.filter(c => {
     const q = busqueda.toLowerCase().trim();
-    return !q || `${c.nombre || ''} ${c.identificacion || c.id || ''} ${c.domicilio || c.direccion || ''} ${c.zonaNombre || ''}`.toLowerCase().includes(q);
+    return !q || `${c.nombre || ''} ${c.identificacion || c.id || ''} ${c.domicilio || c.direccion || ''} ${c.localidadNombre || c.localidad || ''}`.toLowerCase().includes(q);
   });
   const seleccionarCliente = c => {
     setCliente(c);
@@ -214,8 +214,7 @@ function FlujoChoferRapido({
 
   return React.createElement('div', { className: 'fx-page-route', style: { padding: '14px 12px 28px' } },
     React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 } },
-      React.createElement('div', null, React.createElement('div', { style: { fontSize: 21, fontWeight: 800, letterSpacing: '-.02em' } }, 'Ruta del día'), React.createElement('div', { style: { fontSize: 12, color: color.soft, marginTop: 3 } }, zona)),
-      React.createElement('div', { style: { fontSize: 11, color: color.soft, textAlign: 'right' } }, 'PASO ', paso, ' DE 3', React.createElement('div', { style: { marginTop: 5, height: 4, width: 72, background: color.line, borderRadius: 5, overflow: 'hidden' } }, React.createElement('div', { style: { height: '100%', width: `${paso * 33.333}%`, background: color.accent } })))
+      React.createElement('div', null, React.createElement('div', { style: { fontSize: 21, fontWeight: 800, letterSpacing: '-.02em' } }, 'Ruta del día'), React.createElement('div', { style: { fontSize: 12, color: color.soft, marginTop: 3 } }, localidad)), React.createElement('div', { style: { fontSize: 11, color: color.soft, textAlign: 'right' } }, 'PASO ', paso, ' DE 3', React.createElement('div', { style: { marginTop: 5, height: 4, width: 72, background: color.line, borderRadius: 5, overflow: 'hidden' } }, React.createElement('div', { style: { height: '100%', width: `${paso * 33.333}%`, background: color.accent } })))
     ),
     mensaje && React.createElement('div', { style: { padding: '10px 12px', borderRadius: 10, background: color.ok, color: color.okText, fontSize: 12, fontWeight: 700, margin: '10px 0' } }, mensaje),
     jornadaActiva && React.createElement('div', { style: { background: color.surface, border: `1px solid ${color.line}`, borderRadius: 12, padding: 11, margin: '10px 0 14px' } }, React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 800 } }, React.createElement('span', null, 'AGUA DISPONIBLE'), React.createElement('span', { style: { color: porcentajeAgua <= 15 ? 'var(--danger-text)' : color.okText } }, aguaDisponibleNumero.toFixed(2), ' L')), React.createElement('div', { style: { height: 8, background: color.line, borderRadius: 8, overflow: 'hidden', marginTop: 7 } }, React.createElement('div', { style: { height: '100%', width: `${porcentajeAgua}%`, background: porcentajeAgua <= 15 ? 'var(--danger-text)' : color.accent, transition: 'width .18s ease' } })), React.createElement('div', { style: { fontSize: 10, color: color.soft, marginTop: 5 } }, 'Carga inicial: ', aguaCargadaNumero.toFixed(2), ' L · Lectura calculada: ', Number(lecturaActualRuta || jornadaActiva.lecturaInicial || 0).toFixed(2), ' contador')),
@@ -223,8 +222,8 @@ function FlujoChoferRapido({
       jornadaActiva && React.createElement('div', { style: { background: color.surface, border: `1px solid ${color.line}`, borderRadius: 11, padding: 10, margin: '12px 0 10px' } }, React.createElement('div', { style: { fontSize: 10, color: color.faint, fontWeight: 800, letterSpacing: '.08em' } }, 'ASIGNACIÓN OPERATIVA'), React.createElement('div', { style: { fontSize: 13, fontWeight: 800, marginTop: 4 } }, '🚚 ', vehiculoNombreRuta), React.createElement('div', { style: { fontSize: 11, color: color.soft, marginTop: 3 } }, 'Vehículo ID: ', vehiculoIdRuta, ' · Medidor: ', medidorNombreRuta, ' · Medidor ID: ', medidorIdRuta), React.createElement('div', { style: { fontSize: 10, color: color.soft, marginTop: 4 } }, medidorRuta.digitos, ' dígitos · el sexto dígito incrementa cada ', medidorRuta.litrosPorIncremento, ' L')),
       React.createElement('input', { value: busqueda, onChange: e => setBusqueda(e.target.value), placeholder: 'Buscar por nombre, ID o dirección…', style: { width: '100%', boxSizing: 'border-box', padding: '13px 14px', border: `1px solid ${color.line}`, borderRadius: 11, background: color.surface, color: color.ink, fontSize: 14, margin: '14px 0 10px' }, autoFocus: true }),
       React.createElement('div', { style: { fontSize: 11, fontWeight: 800, color: color.faint, letterSpacing: '.08em', margin: '12px 2px 8px' } }, 'CLIENTES · ', clientesFiltrados.length),
-      React.createElement('div', null, clientesFiltrados.map(c => React.createElement('button', { key: c.id, onClick: () => seleccionarCliente(c), style: { width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, border: `1px solid ${atendido(c) ? 'var(--ok)' : color.line}`, background: atendido(c) ? color.ok : color.surface, borderRadius: 12, padding: '13px 12px', marginBottom: 8, cursor: 'pointer', color: color.ink } }, React.createElement('span', { style: { minWidth: 0 } }, React.createElement('span', { style: { display: 'block', fontWeight: 800, fontSize: 14 } }, c.nombre || 'Cliente sin nombre'), React.createElement('span', { style: { display: 'block', fontSize: 11, color: color.soft, marginTop: 3 } }, 'ID ', c.identificacion || c.id, ' · ', c.domicilio || c.direccion || 'Sin dirección', c.zonaNombre ? ' · ' + c.zonaNombre : '')), React.createElement('span', { style: { fontSize: 22, color: atendido(c) ? 'var(--ok-text)' : color.faint, fontWeight: 800 } }, atendido(c) ? '✓' : '›')))),
-      clientesFiltrados.length === 0 && React.createElement('div', { style: { textAlign: 'center', padding: 28, color: color.faint, fontSize: 13 } }, 'No hay clientes para esta búsqueda o zona.')
+      React.createElement('div', null, clientesFiltrados.map(c => React.createElement('button', { key: c.id, onClick: () => seleccionarCliente(c), style: { width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, border: `1px solid ${atendido(c) ? 'var(--ok)' : color.line}`, background: atendido(c) ? color.ok : color.surface, borderRadius: 12, padding: '13px 12px', marginBottom: 8, cursor: 'pointer', color: color.ink } }, React.createElement('span', { style: { minWidth: 0 } }, React.createElement('span', { style: { display: 'block', fontWeight: 800, fontSize: 14 } }, c.nombre || 'Cliente sin nombre'), React.createElement('span', { style: { display: 'block', fontSize: 11, color: color.soft, marginTop: 3 } }, 'ID ', c.identificacion || c.id, ' · ', c.domicilio || c.direccion || 'Sin dirección', c.localidadNombre || c.localidad ? ' · ' + (c.localidadNombre || c.localidad) : '')), React.createElement('span', { style: { fontSize: 22, color: atendido(c) ? 'var(--ok-text)' : color.faint, fontWeight: 800 } }, atendido(c) ? '✓' : '›')))),
+      clientesFiltrados.length === 0 && React.createElement('div', { style: { textAlign: 'center', padding: 28, color: color.faint, fontSize: 13 } }, 'No hay clientes para esta búsqueda o localidad.')
     ),
     paso === 2 && cliente && React.createElement(React.Fragment, null,
       React.createElement('button', { onClick: volverRuta, style: { border: 0, background: 'transparent', color: color.soft, padding: '8px 0', cursor: 'pointer', fontWeight: 700 } }, '← Volver a la ruta'),
@@ -248,7 +247,7 @@ function RutaReparto({
   productos = [],
   clientes = [],
   rutas = [],
-  zonas = [],
+  localidades = [],
   pedidos = [],
   jornadas = [],
   medicion = null,
@@ -262,7 +261,7 @@ function RutaReparto({
   productos = Array.isArray(productos) ? productos : [];
   clientes = Array.isArray(clientes) ? clientes : [];
   rutas = Array.isArray(rutas) ? rutas : [];
-  zonas = Array.isArray(zonas) ? zonas : [];
+  localidades = Array.isArray(localidades) ? localidades : [];
   pedidos = Array.isArray(pedidos) ? pedidos : [];
   currentUser = currentUser || {};
   const runtime = typeof window !== 'undefined' ? window : globalThis;
@@ -318,8 +317,10 @@ function RutaReparto({
           repartidorId: String(form.repartidorId || ''),
           repartidorNombre: String(form.repartidorNombre || ''),
           vehiculo: String(form.vehiculo || ''),
-          zona: String(form.zona || ''),
-          zonaId: String(form.zonaId || ''),
+          localidad: String(form.localidad || ''),
+          localidadId: String(form.localidadId || ''),
+          vehiculoId: String(form.vehiculoId || ''),
+          medidorId: String(form.medidorId || ''),
           fechaProgramada: String(form.fechaProgramada || ''),
           fechaRegresoProgramada: String(form.fechaRegresoProgramada || '')
         });
@@ -458,13 +459,13 @@ function RutaReparto({
       flash('⚠️ Elige a qué repartidor se la asignas');
       return;
     }
-    if (!progForm?.zonaId) {
-      flash('⚠️ Elige una zona asignada a ese chofer');
+    if (!progForm?.localidadId) {
+      flash('⚠️ Elige una localidad asignada a ese chofer');
       return;
     }
-    const zonaAsignada = zonas.find(z => z.id === progForm.zonaId && (z.choferId === progForm.repartidorId || z.repartidorId === progForm.repartidorId));
-    if (!zonaAsignada) {
-      flash('⚠️ La zona no pertenece al chofer seleccionado');
+    const localidadAsignada = localidades.find(l => l.id === progForm.localidadId && (l.repartidorId === progForm.repartidorId || (l.repartidorIds || []).includes(progForm.repartidorId)));
+    if (!localidadAsignada) {
+      flash('⚠️ La localidad no pertenece al chofer seleccionado');
       return;
     }
     flash(currentUser.role === 'repartidor'
@@ -472,7 +473,7 @@ function RutaReparto({
       : '✅ Repartidor asignado. Ahora agrega el cargamento e inicia la ruta.');
   };
   const hayBorradorTransferencia = !!(cart.length || pedidosIncluidos.length || (progForm && (
-    progForm.repartidorId || progForm.vehiculo?.trim() || progForm.zona?.trim() || progForm.zonaId || progForm.fechaProgramada || progForm.fechaRegresoProgramada
+    progForm.repartidorId || progForm.vehiculo?.trim() || progForm.localidad?.trim() || progForm.localidadId || progForm.fechaProgramada || progForm.fechaRegresoProgramada
   )));
   useEffect(() => {
     if (!borradorListo) return;
@@ -483,7 +484,7 @@ function RutaReparto({
     appWriteDraft('transferencia', currentUser?.uid, {
       progForm: progForm ? {
         repartidorId: progForm.repartidorId || '', repartidorNombre: progForm.repartidorNombre || '', vehiculo: progForm.vehiculo || '',
-        zona: progForm.zona || '', zonaId: progForm.zonaId || '', fechaProgramada: progForm.fechaProgramada || '', fechaRegresoProgramada: progForm.fechaRegresoProgramada || ''
+        localidad: progForm.localidad || '', localidadId: progForm.localidadId || '', vehiculoId: progForm.vehiculoId || '', medidorId: progForm.medidorId || '', fechaProgramada: progForm.fechaProgramada || '', fechaRegresoProgramada: progForm.fechaRegresoProgramada || ''
       } : null,
       cart: cart.map(item => ({ id: item.id, nombre: item.nombre || '', unidad: item.unidad || '', cant: item.cant })),
       pedidosIncluidos: pedidosIncluidos.slice()
@@ -705,8 +706,10 @@ function RutaReparto({
           repartidorId: asignacion.repartidorId,
           repartidorNombre: asignacion.repartidorNombre || '',
           vehiculo: asignacion.vehiculo || '',
-          zona: asignacion.zona || '',
-          zonaId: asignacion.zonaId || '',
+          vehiculoId: asignacion.vehiculoId || '',
+          medidorId: asignacion.medidorId || '',
+          localidad: asignacion.localidad || '',
+          localidadId: asignacion.localidadId || '',
           autocarga: !!asignacion.autocarga,
           asignadaPorUid: currentUser.uid,
           asignadaPorNombre: currentUser.nombre || '',
@@ -899,7 +902,7 @@ function RutaReparto({
       flash('❌ No se pudo solicitar la recepción: ' + e.message);
     }
   };
-  if (currentUser.role === 'repartidor') return React.createElement(FlujoChoferRapido, { productos, clientes, rutas, zonas, jornadas, medicion, tarifas, vehiculos, medidores, currentUser });
+  if (currentUser.role === 'repartidor') return React.createElement(FlujoChoferRapido, { productos, clientes, rutas, localidades, jornadas, medicion, tarifas, vehiculos, medidores, currentUser });
   return React.createElement("div", {
     style: {
       padding: '16px 12px'
@@ -946,8 +949,10 @@ function RutaReparto({
       repartidorId: currentUser.role === 'repartidor' ? currentUser.uid : '',
       repartidorNombre: currentUser.role === 'repartidor' ? currentUser.nombre || '' : '',
       vehiculo: '',
-      zona: '',
-      zonaId: '',
+      localidad: '',
+      localidadId: '',
+      vehiculoId: '',
+      medidorId: '',
       fechaProgramada: '',
       fechaRegresoProgramada: ''
     }),
@@ -980,8 +985,11 @@ function RutaReparto({
         ...f,
         repartidorId: e.target.value,
         repartidorNombre: u ? u.nombre : '',
-        zona: '',
-        zonaId: ''
+        localidad: '',
+        localidadId: '',
+        vehiculo: '',
+        vehiculoId: '',
+        medidorId: ''
       }));
       setPedidosIncluidos([]);
     },
@@ -1007,21 +1015,12 @@ function RutaReparto({
       color: 'var(--warn-text)',
       marginBottom: 10
     }
-  }, "No hay usuarios con rol \"repartidor\" todavía — créalos en Configuración → Usuarios."), React.createElement(Lbl, null, "Vehículo"), React.createElement(Inp, {
-    value: progForm.vehiculo,
-    onChange: e => setProgForm(f => ({
-      ...f,
-      vehiculo: e.target.value
-    })),
-    placeholder: "Unidad o medio de distribución…",
-    style: {
-      marginBottom: 10
-    }
-  }), React.createElement(Lbl, null, "Zona operativa"), React.createElement("select", {
-    value: progForm.zonaId,
+  }, "No hay usuarios con rol \"repartidor\" todavía — créalos en Configuración → Usuarios."), React.createElement(Lbl, null, "Localidad operativa"), React.createElement("select", {
+    value: progForm.localidadId,
     onChange: e => {
-      const z = zonas.find(x => x.id === e.target.value);
-      setProgForm(f => ({ ...f, zonaId: e.target.value, zona: z ? z.nombre : '' }));
+      const localidad = localidades.find(l => l.id === e.target.value);
+      const vehiculo = vehiculos.find(v => v.id === localidad?.vehiculoId);
+      setProgForm(f => ({ ...f, localidadId: e.target.value, localidad: localidad?.nombre || '', vehiculoId: localidad?.vehiculoId || '', vehiculo: localidad?.vehiculoNombre || vehiculo?.nombre || vehiculo?.codigo || '', medidorId: localidad?.medidorId || vehiculo?.medidorId || '' }));
     },
     style: {
       background: 'var(--surface-2)',
@@ -1034,7 +1033,7 @@ function RutaReparto({
       boxSizing: 'border-box',
       marginBottom: 10
     }
-  }, React.createElement("option", { value: "" }, "Selecciona una zona…"), zonas.filter(z => z.activo !== false && (z.choferId === progForm.repartidorId || z.repartidorId === progForm.repartidorId)).map(z => React.createElement("option", { key: z.id, value: z.id }, z.nombre)),), React.createElement(Lbl, null, "Salida programada"), React.createElement(Inp, {
+  }, React.createElement("option", { value: "" }, "Selecciona una localidad…"), localidades.filter(l => l.activo !== false && (l.repartidorId === progForm.repartidorId || (l.repartidorIds || []).includes(progForm.repartidorId))).map(l => React.createElement("option", { key: l.id, value: l.id }, l.nombre))), React.createElement('div', { style: { background: 'var(--surface-2)', borderRadius: 8, padding: 9, marginBottom: 10, fontSize: 11 } }, 'Vehículo preseleccionado: ', progForm.vehiculo || 'Pendiente', ' · ID: ', progForm.vehiculoId || '—', React.createElement('br'), 'Medidor asociado: ', progForm.medidorId || 'Pendiente', ' · No se captura manualmente'), React.createElement(Lbl, null, "Salida programada"), React.createElement(Inp, {
     type: "datetime-local",
     value: progForm.fechaProgramada,
     onChange: e => setProgForm(f => ({

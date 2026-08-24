@@ -26,9 +26,8 @@ const S_LOC = [{
   nombre: 'EJEMPLO — Localidad de muestra'
 }];
 
-// Las zonas reales las define la Empresa desde la pantalla Jerarquía.
-// No se insertan zonas ni choferes ficticios durante la inicialización.
-const S_ZONAS = [];
+// Las localidades reales las define la Empresa desde la pantalla de
+// Asignaciones / Localidades. No se insertan repartidores ficticios.
 
 /* Siembra cada colección UNA sola vez (marca el avance en _meta/seed para
    no repetirlo). Se llama desde hooks/useSesion.js apenas hay un usuario
@@ -52,5 +51,4 @@ async function sembrarDatosInicialesSiVacio(db) {
   await sembrarColeccion('productos', COLECCIONES.PRODUCTOS, S_PROD);
   await sembrarColeccion('clientes', COLECCIONES.CLIENTES, S_CLI);
   await sembrarColeccion('localidades', COLECCIONES.LOCALIDADES, S_LOC);
-  await sembrarColeccion('zonas', COLECCIONES.ZONAS, S_ZONAS);
 }

@@ -3,7 +3,7 @@ function App() {
     currentUser, authChecked, firestoreError,
     locked, setLocked,
     isOnline,
-    productos, clientes, zonas, notas, creditos, rutas, jornadas, medicion, tarifas, vehiculos, medidores, pedidos,
+    productos, clientes, localidades, notas, creditos, rutas, jornadas, medicion, tarifas, vehiculos, medidores, pedidos,
     pendCounts, totalPendientes, notificacionesTransferencias,
   } = useSesion();
   const [tab, setTab] = useState('home');
@@ -18,7 +18,7 @@ function App() {
     if (typeof appSuscribirVentasOffline !== 'function') return undefined;
     return appSuscribirVentasOffline(setOfflineVentaResumen);
   }, []);
-  const ALL_TABS = [['home', '🏠', 'Inicio'], ['nota', '📋', 'Venta administrativa'], ['clientes', '👥', 'Clientes fijos'], ['creditos', '💳', 'Créditos / Abonos'], ['ruta', '🚚', currentUser?.role === 'repartidor' ? 'Mi Ruta' : 'Cargas / Transferencias'], ['jornada', '⏱', currentUser?.role === 'repartidor' ? 'Mi Jornada' : 'Conciliaciones'], ['repartidores', '🧭', 'Repartidores / Cargas'], ['productos', '📦', 'Productos / Tarifas'], ['inventario', '📋', 'Inventario de agua'], ['reportes', '📈', 'Reportes operativos'], ['gerencia', '💰', 'Caja'], ['jerarquia', '🏢', 'Asignaciones / Zonas'], ['privacidad', '🛡️', 'Privacidad']];
+  const ALL_TABS = [['home', '🏠', 'Inicio'], ['nota', '📋', 'Venta administrativa'], ['clientes', '👥', 'Clientes fijos'], ['creditos', '💳', 'Créditos / Abonos'], ['ruta', '🚚', currentUser?.role === 'repartidor' ? 'Mi Ruta' : 'Cargas / Transferencias'], ['jornada', '⏱', currentUser?.role === 'repartidor' ? 'Mi Jornada' : 'Conciliaciones'], ['repartidores', '🧭', 'Repartidores / Cargas'], ['productos', '📦', 'Productos / Tarifas'], ['inventario', '📋', 'Inventario de agua'], ['reportes', '📈', 'Reportes operativos'], ['gerencia', '💰', 'Caja'], ['jerarquia', '🏢', 'Asignaciones / Localidades'], ['privacidad', '🛡️', 'Privacidad']];
   const permTabs = permisoTabs(currentUser);
   const tabsPermitidos = ['home', 'privacidad', ...ALL_TABS.filter(([id]) => id !== 'home' && id !== 'privacidad' && permTabs[id]).map(([id]) => id)];
   const TABS = ALL_TABS.filter(([id]) => tabsPermitidos.includes(id));
@@ -55,7 +55,7 @@ function App() {
   const ctx = {
     productos,
     clientes,
-    zonas,
+    localidades,
     notas,
     creditos,
     rutas,

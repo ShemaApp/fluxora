@@ -393,7 +393,7 @@ function RutaActivaCard({ ruta, currentUser, onCerrar }) {
     style: { display: 'flex', justifyContent: 'space-between', gap: 10, marginBottom: 7 }
   }, React.createElement("div", null, React.createElement("strong", null, ruta.repartidorNombre || 'Sin repartidor'), React.createElement("div", {
     style: { fontSize: 11, color: 'var(--ink-faint)', marginTop: 2 }
-  }, "🚐 ", ruta.vehiculo || 'Sin vehículo', " · 📍 ", ruta.zona || 'Sin zona')), React.createElement("span", {
+  }, "🚐 ", ruta.vehiculo || 'Sin vehículo', " · 📍 ", ruta.localidad || 'Sin localidad')), React.createElement("span", {
     style: {
       background: ESTADOS.activa.color + '22',
       color: ESTADOS.activa.color,
@@ -488,7 +488,7 @@ function RepartidoresPanel({
         lng
       } = r.ubicacionActual;
       pts.push([lat, lng]);
-      const popup = `<b>${r.repartidorNombre || '—'}</b><br/>${r.vehiculo || ''}<br/>${r.zona || ''}`;
+      const popup = `<b>${r.repartidorNombre || '—'}</b><br/>${r.vehiculo || ''}<br/>${r.localidad || ''}`;
       if (markersRef.current[r.id]) {
         markersRef.current[r.id].setLatLng([lat, lng]).setPopupContent(popup);
       } else {
@@ -731,11 +731,11 @@ function RepartidoresPanel({
     }
   };
   const exportarHistorialCSV = () => {
-    const rows = [['Fecha', 'Repartidor', 'Vehículo', 'Zona', 'Estado', 'Salida real', 'Regreso real', 'Duración (min)', 'Entregas', 'Total vendido']];
+    const rows = [['Fecha', 'Repartidor', 'Vehículo', 'Localidad', 'Estado', 'Salida real', 'Regreso real', 'Duración (min)', 'Entregas', 'Total vendido']];
     hist.forEach(r => {
       const dur = r.fechaSalidaReal && r.fechaRegresoReal ? Math.round((new Date(r.fechaRegresoReal) - new Date(r.fechaSalidaReal)) / 60000) : '';
       const resumen = resumenRuta(r);
-      rows.push([fDateTime(r.fecha), r.repartidorNombre || '', r.vehiculo || '', r.zona || '', ESTADOS[r.estado]?.label || r.estado, fDateTime(r.fechaSalidaReal), fDateTime(r.fechaRegresoReal), dur, resumen.entregas.length, resumen.totalVendido.toFixed(2)]);
+      rows.push([fDateTime(r.fecha), r.repartidorNombre || '', r.vehiculo || '', r.localidad || '', ESTADOS[r.estado]?.label || r.estado, fDateTime(r.fechaSalidaReal), fDateTime(r.fechaRegresoReal), dur, resumen.entregas.length, resumen.totalVendido.toFixed(2)]);
     });
     downloadCSV('historial_rutas_' + Date.now() + '.csv', rows);
   };
@@ -923,7 +923,7 @@ function RepartidoresPanel({
       marginBottom: 8,
       lineHeight: 1.4
     }
-  }, "Consulta la ubicación en vivo cuando haya conexión. La descarga y el almacenamiento local de zonas de mapa están deshabilitados."))), tab === 'clientesqr' && React.createElement(React.Fragment, null, React.createElement("div", {
+  }, "Consulta la ubicación en vivo cuando haya conexión. La descarga y el almacenamiento local de localidades de operación están deshabilitados."))), tab === 'clientesqr' && React.createElement(React.Fragment, null, React.createElement("div", {
     style: {
       display: 'flex',
       gap: 8,
@@ -1390,7 +1390,7 @@ function RepartidoresPanel({
         fontSize: 12,
         color: 'var(--ink-soft)'
       }
-    }, "🚐 ", r.vehiculo || '—', " · 📍 ", r.zona || '—', " · ⏱ ", dur));
+    }, "🚐 ", r.vehiculo || '—', " · 📍 ", r.localidad || '—', " · ⏱ ", dur));
   })), qrModalFor && React.createElement("div", {
     style: {
       position: 'fixed',
