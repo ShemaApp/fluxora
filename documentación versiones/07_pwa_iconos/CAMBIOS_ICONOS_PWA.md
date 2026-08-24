@@ -6,14 +6,14 @@ Preparar los recursos mínimos de identidad para que FLUXORA pueda instalarse co
 
 ## Cambio realizado
 
-El símbolo gráfico del logotipo FLUXORA aprobado para el login se convirtió en dos iconos cuadrados, conservando la forma y los colores de marca:
+El archivo cuadrado oficial proporcionado por el usuario, `assets/brand/fluxora-app-icon-source.png`, se utilizó como fuente directa para generar dos tamaños PWA. La conversión fue únicamente de resolución; no se recortó, redibujó ni agregó otro fondo al diseño:
 
 | Archivo | Dimensiones | Uso |
 |---|---:|---|
 | `icons/icon-192.png` | 192×192 px | Icono PWA estándar, favicon e icono táctil. |
 | `icons/icon-512.png` | 512×512 px | Icono PWA de alta resolución y manifest. |
 
-Los iconos utilizan Deep Navy `#063B5C` como fondo y mantienen una zona segura amplia para el propósito `maskable`.
+Los iconos conservan el diseño azul del archivo oficial y su canal alfa. Se declararon para los propósitos `any` y `maskable`; la composición cuadrada y el margen visible del archivo recibido funcionan como zona segura de instalación.
 
 ## Manifest actualizado
 
@@ -28,7 +28,7 @@ Los iconos utilizan Deep Navy `#063B5C` como fondo y mantienen una zona segura a
 
 ## Service worker
 
-`sw.js` conserva el flujo de red y la persistencia existentes. Únicamente se incrementó la versión de caché a `v6-pwa-iconos-fluxora` para que los dispositivos instalados descarten la caché anterior y vuelvan a cargar el manifest, los iconos y la identidad visual actualizada.
+`sw.js` conserva el flujo de red y la persistencia existentes. Únicamente se actualizó el identificador de caché a `v1.1.0`, siguiendo el versionado semántico acordado, para que los dispositivos instalados descarten la caché anterior y vuelvan a cargar el manifest, los iconos y la identidad visual actualizada.
 
 La lista de precaché contiene:
 
@@ -43,7 +43,7 @@ La lista de precaché contiene:
 
 ## Qué no cambió
 
-No se modificaron Firebase, Firestore, reglas, permisos, roles, cálculos de jornada, ventas, medidor, inventario, conciliación, operaciones offline, handlers ni colecciones. El script `crear_iconos_pwa.py` es únicamente una herramienta reproducible de generación de activos; no participa en la aplicación en tiempo de ejecución.
+No se modificaron Firebase, Firestore, reglas, permisos, roles, cálculos de jornada, ventas, medidor, inventario, conciliación, operaciones offline, handlers ni colecciones. Los scripts `crear_iconos_pwa.py` y `validar_icono_pwa.py` son herramientas reproducibles de generación y validación; no participan en la aplicación en tiempo de ejecución.
 
 ## Validación
 
@@ -53,7 +53,7 @@ Se verificó que los dos archivos existan, sean PNG válidos y tengan exactament
 
 | Síntoma | Revisión |
 |---|---|
-| El navegador sigue mostrando `Mi Negocio` | Revisar `manifest.json`, eliminar la instalación anterior y comprobar que el service worker activo sea `v6-pwa-iconos-fluxora`. |
-| El icono aparece roto | Comprobar que `icons/icon-192.png` y `icons/icon-512.png` existan en la raíz publicada y que sus rutas sean relativas a `manifest.json`. |
+| El navegador sigue mostrando `Mi Negocio` | Revisar `manifest.json`, eliminar la instalación anterior y comprobar que el service worker activo sea `v1.1.0`. |
+| El icono aparece roto | Comprobar que `icons/icon-192.png` y `icons/icon-512.png` existan en la raíz publicada, que sus rutas sean relativas a `manifest.json` y que `assets/brand/fluxora-app-icon-source.png` siga documentado como fuente. |
 | El icono antiguo permanece después de publicar | Desinstalar la PWA de prueba, limpiar datos del sitio y recargar para activar el nuevo service worker. |
 | La precaché falla | Revisar primero que ambos iconos existan y que todos los archivos incluidos en `APP_SHELL` estén publicados. |
