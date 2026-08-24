@@ -27,6 +27,12 @@ service cloud.firestore {
         get(/databases/$(database)/documents/localidades/$(localidadId)).data.repartidorId == request.auth.uid;
     }
 
+    function localidadAsignada(localidadId) {
+      return localidadId is string && localidadId != '' &&
+        get(/databases/$(database)/documents/localidades/$(localidadId)).data.repartidorId is string &&
+        get(/databases/$(database)/documents/localidades/$(localidadId)).data.repartidorId != '';
+    }
+
     function clienteDelRepartidor(clienteId) {
       return autenticado() && clienteId is string &&
         get(/databases/$(database)/documents/clientes/$(clienteId)).data.localidadId is string &&
@@ -57,8 +63,8 @@ service cloud.firestore {
       // REPARTIDOR solo puede leer y actualizar clientes de sus localidades;
       // nunca puede cambiar la localidad asignada.
       allow read: if autenticado() && (esAdmin() || perfil().role != 'repartidor' || localidadDelRepartidor(resource.data.localidadId));
-      allow create: if esAdmin() && request.resource.data.localidadId is string && request.resource.data.localidadId != '';
-      allow update: if esAdmin() || (perfil().role == 'repartidor' && localidadDelRepartidor(resource.data.localidadId) && request.resource.data.localidadId == resource.data.localidadId);
+      allow create: if esAdmin() && localidadAsignada(request.resource.data.localidadId);
+      allow update: if (esAdmin() && localidadAsignada(request.resource.data.localidadId)) || (perfil().role == 'repartidor' && localidadDelRepartidor(resource.data.localidadId) && request.resource.data.localidadId == resource.data.localidadId);
       allow delete: if esAdmin();
     }
     match /localidades/{id} {
