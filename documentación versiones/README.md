@@ -23,6 +23,7 @@ Esta carpeta concentra **todos los archivos Markdown del proyecto**. La document
 | `10_flujo_desarrollo` | Procedimiento de desarrollo, validación, publicación incremental y reversión. | Confirmar cómo se publica cada bloque de prueba y cómo localizar o revertir un fallo. |
 | `11_migracion_localidad` | Sustitución completa de zona por localidad como unidad de asignación del REPARTIDOR. | Revisar localidadId, asignaciones a repartidores, filtros de clientes y compatibilidad histórica. |
 | `12_colecciones_indices` | Estado de colecciones activas, colecciones legadas y consultas que pueden requerir índices compuestos. | Diagnosticar errores de Firestore, localidades sin asignación e índices pendientes. |
+| `13_reglas_localidad` | Reglas de seguridad por localidadId, catálogos separados y alcance del REPARTIDOR. | Diagnosticar rechazos de lectura/escritura y verificar el contrato de permisos. |
 
 ## Especificación fuente
 
@@ -40,6 +41,7 @@ Primero identificar la pantalla y el rol afectados. Después revisar el document
 | El estilo, logo, responsive o navegación visual falla | `00_especificacion_fuente` y `05_reestructuracion_visual` |
 | La página pública no refleja el último cambio | `06_publicacion_y_pruebas` |
 | El icono, nombre o instalación PWA no se actualiza | `07_pwa_iconos` |
+| Firestore rechaza una lectura o escritura por localidad | `13_reglas_localidad` y `12_colecciones_indices` |
 | No se entiende una dependencia o módulo | `04_arquitectura_y_manual` |
 
 ## Regla para futuras versiones
@@ -60,4 +62,4 @@ Cada nueva carpeta debe indicar qué cambió, qué no cambió, cómo se validó,
 
 ## Estado actual
 
-La documentación existente fue reubicada desde la raíz del proyecto. También se incorporó una copia de `pantallas.md` como especificación fuente dentro de `00_especificacion_fuente`. La versión `07_pwa_iconos` documenta la conversión del símbolo FLUXORA a iconos PWA y la actualización del manifest y la caché. La versión `08_configuracion_admin_repartidor` conserva la auditoría de dependencias, la versión `09_referencias_repartidor` documenta el contrato consumido por el REPARTIDOR, la versión `10_flujo_desarrollo` define la publicación incremental para pruebas y la versión `11_migracion_localidad` establece localidad como unidad operativa y la versión `12_colecciones_indices` registra el estado de colecciones e índices. No se modificaron los contenidos históricos de los documentos al moverlos.
+La documentación existente fue reubicada desde la raíz del proyecto. También se incorporó una copia de `pantallas.md` como especificación fuente dentro de `00_especificacion_fuente`. La versión `07_pwa_iconos` documenta la conversión del símbolo FLUXORA a iconos PWA y la actualización del manifest y la caché. La versión `08_configuracion_admin_repartidor` conserva la auditoría de dependencias, la versión `09_referencias_repartidor` documenta el contrato consumido por el REPARTIDOR, la versión `10_flujo_desarrollo` define la publicación incremental para pruebas y la versión `11_migracion_localidad` establece localidad como unidad operativa y la versión `12_colecciones_indices` registra el estado de colecciones e índices y la versión `13_reglas_localidad` documenta las reglas por localidadId. No se modificaron los contenidos históricos de los documentos al moverlos.

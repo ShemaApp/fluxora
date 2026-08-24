@@ -167,10 +167,12 @@ function useSesion() {
     const pedidosQuery = currentUser.role === 'repartidor'
       ? db.collection(COLECCIONES.PEDIDOS).where('repartidorId', '==', currentUser.uid)
       : db.collection(COLECCIONES.PEDIDOS).orderBy('fechaCreacion', 'desc').limit(500);
-    // La localidad es ahora el alcance operativo. Se carga el catálogo y los
-    // clientes para filtrar por las localidades asignadas al repartidor en UI;
-    // las reglas específicas de localidad se habilitarán en su iteración propia.
-    const clientesQuery = db.collection(COLECCIONES.CLIENTES);
+    const localidadesQuery = currentUser.role === 'repartidor'
+      ? db.collection(COLECCIONES.LOCALIDADES).where('repartidorId', '==', currentUser.uid)
+      : db.collection(COLECCIONES.LOCALIDADES);
+    // La localidad es ahora el alcance operativo. La suscripción de clientes
+    // se resuelve en el efecto específico inferior para poder usar los IDs de
+    // localidades asignados al repartidor.
     const jornadasQuery = currentUser.role === 'repartidor'
       ? db.collection(COLECCIONES.JORNADAS).where('repartidorId', '==', currentUser.uid)
       : currentUser.role === 'admin'
@@ -207,15 +209,7 @@ function useSesion() {
         ...d.data()
       })));
       pend('productos', snap);
-    }, errorHandler), clientesQuery.onSnapshot({
-      includeMetadataChanges: true
-    }, snap => {
-      setClientes(snap.docs.map(d => ({
-        id: d.id,
-        ...d.data()
-      })));
-      pend('clientes', snap);
-    }, errorHandler), db.collection(COLECCIONES.LOCALIDADES).onSnapshot({
+    }, errorHandler), localidadesQuery.onSnapshot({
       includeMetadataChanges: true
     }, snap => {
       const lista = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -263,6 +257,52 @@ function useSesion() {
     }, errorHandler)] : [() => setRutas([])])];
     return () => unsubs.forEach(u => u());
   }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser) return undefined;
+    const uid = currentUser.uid;
+    const role = currentUser.role;
+    if (role !== 'repartidor') {
+      if (role !== 'admin') {
+        setClientes([]);
+        return undefined;
+      }
+      return db.collection(COLECCIONES.CLIENTES).onSnapshot({ includeMetadataChanges: true }, snap => {
+        setClientes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        const pendientesClientes = snap.docs.filter(d => d.metadata.hasPendingWrites).length;
+        setPendCounts(p => ({ ...p, clientes: pendientesClientes }));
+      }, err => {
+        console.error('Firestore error clientes:', err);
+        setFirestoreError('⚠️ Error de conexión con clientes. Revisa tus permisos.');
+      });
+    }
+
+    const localidadIds = localidades
+      .filter(localidad => localidad.activo !== false && (localidad.repartidorId === uid || (Array.isArray(localidad.repartidorIds) && localidad.repartidorIds.includes(uid))))
+      .map(localidad => localidad.id)
+      .filter(Boolean);
+    if (!localidadIds.length) {
+      setClientes([]);
+      setPendCounts(p => ({ ...p, clientes: 0 }));
+      return undefined;
+    }
+
+    const grupos = [];
+    for (let i = 0; i < localidadIds.length; i += 10) grupos.push(localidadIds.slice(i, i + 10));
+    const acumulados = new Map();
+    const actualizarClientes = () => {
+      setClientes(Array.from(acumulados.values()));
+      setPendCounts(p => ({ ...p, clientes: Array.from(acumulados.values()).filter(item => item.__pending).length }));
+    };
+    const unsubs = grupos.map(grupo => db.collection(COLECCIONES.CLIENTES).where('localidadId', 'in', grupo).onSnapshot({ includeMetadataChanges: true }, snap => {
+      snap.docs.forEach(d => acumulados.set(d.id, { id: d.id, ...d.data(), __pending: d.metadata.hasPendingWrites }));
+      actualizarClientes();
+    }, err => {
+      console.error('Firestore error clientes por localidad:', err);
+      setFirestoreError('⚠️ No se pudieron cargar los clientes de tus localidades. Revisa tus permisos.');
+    }));
+    return () => unsubs.forEach(unsub => unsub());
+  }, [currentUser?.uid, currentUser?.role, localidades.map(localidad => `${localidad.id}:${localidad.repartidorId || ''}:${Array.isArray(localidad.repartidorIds) ? localidad.repartidorIds.join(',') : ''}:${localidad.activo === false ? '0' : '1'}`).join('|')]);
 
   return {
     currentUser, authChecked, firestoreError,
