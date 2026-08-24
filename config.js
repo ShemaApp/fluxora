@@ -6,6 +6,8 @@ function Configuracion({
   onAbrirUsuariosConsumido,
   medicion = null,
   tarifas = [],
+  vehiculos = [],
+  medidores = [],
   abrirPrivacidad,
   onAbrirPrivacidadConsumido
 }) {
@@ -219,7 +221,7 @@ function Configuracion({
       marginBottom: 16,
       flexWrap: 'wrap'
     }
-  }, [['perfil', '👤 Perfil'], ...(permisoAcciones(currentUser).password ? [['password', '🔑 Contraseña']] : []), ['pin', '🔒 PIN'], ['privacidad', '🛡️ Privacidad'], ...(isAdmin ? [['usuarios', '👥 Usuarios'], ['permisos', '🔐 Permisos'], ['medicion', '📏 Medición y Venta']] : [])].map(([v, l]) => React.createElement("button", {
+  }, [['perfil', '👤 Perfil'], ...(permisoAcciones(currentUser).password ? [['password', '🔑 Contraseña']] : []), ['pin', '🔒 PIN'], ['privacidad', '🛡️ Privacidad'], ...(isAdmin ? [['usuarios', '👥 Usuarios'], ['permisos', '🔐 Permisos'], ['medicion', '📏 Medición y Venta'], ['flota', '🚚 Vehículos / Medidores']] : [])].map(([v, l]) => React.createElement("button", {
     key: v,
     onClick: () => {
       setSub(v);
@@ -495,7 +497,7 @@ function Configuracion({
         flex: 1
       }
     }, "🗑 Eliminar"))));
-  })), sub === 'medicion' && isAdmin && React.createElement(ConfiguracionMedicion, { currentUser, medicion, tarifas }), sub === 'permisos' && isAdmin && React.createElement(Permisos, {
+  })), sub === 'medicion' && isAdmin && React.createElement(ConfiguracionMedicion, { currentUser, medicion, tarifas }), sub === 'flota' && isAdmin && React.createElement(GestionFlota, { currentUser, medicion, vehiculos, medidores }), sub === 'permisos' && isAdmin && React.createElement(Permisos, {
     currentUser: currentUser
   }), form && React.createElement(Modal, {
     title: form.id ? 'Editar Usuario' : 'Nuevo Usuario',

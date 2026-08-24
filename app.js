@@ -294,6 +294,8 @@ function App() {
     currentUser: currentUser,
     medicion,
     tarifas,
+    vehiculos,
+    medidores,
     onBack: volverAtras,
     onLogout: logout,
     abrirUsuarios: abrirUsuarios,
