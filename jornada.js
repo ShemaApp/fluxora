@@ -1,18 +1,31 @@
 const FACTOR_LITROS_POR_GARRAFON = 20;
-function JornadaMedidor({ zonas = [], jornadas = [], notas = [], clientes = [], medicion = null, currentUser = {}, onIrA }) {
+function JornadaMedidor({ zonas = [], jornadas = [], notas = [], clientes = [], medicion = null, vehiculos = [], medidores = [], currentUser = {}, onIrA }) {
   const zonasDisponibles = (zonas || []).filter(z => z.activo !== false && (currentUser.role === 'admin' || z.choferId === currentUser.uid || z.repartidorId === currentUser.uid));
   const jornadaAbierta = (jornadas || []).find(j => j.estado === 'abierta' && (currentUser.role === 'admin' || j.repartidorId === currentUser.uid));
   const [form, setForm] = useState(() => {
     const borrador = typeof appReadDraft === 'function' ? appReadDraft('jornada', currentUser?.uid) : null;
-    return borrador?.form || { zonaId: '', vehiculo: '', medidorId: '', lecturaInicial: '', aguaCargadaLitros: '' };
+    return borrador?.form || { zonaId: '', vehiculoId: '', vehiculo: '', vehiculoNombre: '', medidorId: '', medidorNombre: '', lecturaInicial: '', aguaCargadaLitros: '' };
   });
-  const jornadaVehiculoAbierta = (jornadas || []).find(j => j.estado === 'abierta' && ((form.vehiculo && String(j.vehiculoId || j.vehiculo) === String(form.vehiculo)) || (form.medidorId && String(j.medidorId) === String(form.medidorId))));
   const [lecturaFinal, setLecturaFinal] = useState('');
   const [mensaje, setMensaje] = useState('');
   const zonaActual = zonasDisponibles.find(z => z.id === form.zonaId);
-  const jornadasVehiculo = (jornadas || []).filter(j => j.vehiculo === form.vehiculo && j.estado === 'cerrada').sort((a, b) => new Date(b.fechaCierre || 0) - new Date(a.fechaCierre || 0));
+  const vehiculoActual = resolverVehiculoOperativo({ jornada: form, zona: zonaActual, vehiculos });
+  const medidorActual = resolverMedidorOperativo({ jornada: form, zona: zonaActual, vehiculo: vehiculoActual, medidores, medicion });
+  const referenciasCoinciden = j => {
+    const tieneVehiculo = !!vehiculoActual.id;
+    const tieneMedidor = !!medidorActual.id;
+    const mismoVehiculo = tieneVehiculo && String(j.vehiculoId || '') === String(vehiculoActual.id);
+    const mismoMedidor = tieneMedidor && String(j.medidorId || '') === String(medidorActual.id);
+    if (tieneVehiculo && tieneMedidor) return mismoVehiculo && mismoMedidor;
+    if (tieneVehiculo) return mismoVehiculo;
+    if (tieneMedidor) return mismoMedidor;
+    return !!form.vehiculo && String(j.vehiculoId || j.vehiculo) === String(form.vehiculo);
+  };
+  const jornadaVehiculoAbierta = (jornadas || []).find(j => j.estado === 'abierta' && referenciasCoinciden(j));
+  const jornadasVehiculo = (jornadas || []).filter(j => j.estado === 'cerrada' && referenciasCoinciden(j)).sort((a, b) => new Date(b.fechaCierre || 0) - new Date(a.fechaCierre || 0));
   const jornadaAnterior = jornadasVehiculo[0];
-  const lecturaAnterior = jornadaAnterior?.lecturaFinal ?? zonaActual?.lecturaActual ?? null;
+  const lecturaZonaCompatible = !zonaActual?.medidorId || !medidorActual.id || String(zonaActual.medidorId) === String(medidorActual.id);
+  const lecturaAnterior = jornadaAnterior?.lecturaFinal ?? (lecturaZonaCompatible ? zonaActual?.lecturaActual : null) ?? null;
   const litrosPorUnidad = Number(zonaActual?.litrosPorUnidad ?? medicion?.litrosPorUnidad ?? FACTOR_LITROS_POR_GARRAFON);
   const incrementoContadorPorUnidad = Number(zonaActual?.incrementoContadorPorUnidad ?? medicion?.incrementoContadorPorUnidad ?? 2);
   const unidadComercial = zonaActual?.unidadComercial || medicion?.unidadComercial || 'Garrafón';
@@ -27,7 +40,19 @@ function JornadaMedidor({ zonas = [], jornadas = [], notas = [], clientes = [], 
 
   const seleccionarZona = id => {
     const zona = zonasDisponibles.find(z => z.id === id);
-    setForm(f => ({ ...f, zonaId: id, vehiculo: zona?.vehiculo || '', medidorId: zona?.medidorId || '', lecturaInicial: '', aguaCargadaLitros: '' }));
+    const vehiculo = resolverVehiculoOperativo({ zona, vehiculos });
+    const medidor = resolverMedidorOperativo({ zona, vehiculo, medidores, medicion });
+    setForm(f => ({
+      ...f,
+      zonaId: id,
+      vehiculo: vehiculo.nombre || zona?.vehiculo || '',
+      vehiculoId: vehiculo.id || zona?.vehiculoId || '',
+      vehiculoNombre: vehiculo.nombre || zona?.vehiculoNombre || zona?.vehiculo || '',
+      medidorId: medidor.id || zona?.medidorId || '',
+      medidorNombre: medidor.nombre || zona?.medidorNombre || '',
+      lecturaInicial: '',
+      aguaCargadaLitros: ''
+    }));
   };
   const iniciar = async () => {
     const inicio = Number(form.lecturaInicial);
@@ -35,7 +60,9 @@ function JornadaMedidor({ zonas = [], jornadas = [], notas = [], clientes = [], 
     if (jornadaAbierta) return flash('Ya existe una jornada abierta; ciérrala antes de iniciar otra');
     if (jornadaVehiculoAbierta) return flash('Ese vehículo o medidor ya está ocupado por otra jornada abierta');
     if (medicion && (medicion.unidadActivo === false || medicion.medidorActivo === false)) return flash('La configuración de medición está inactiva; solicita a ADMIN que la habilite');
-    if (!form.zonaId || !form.vehiculo.trim() || !form.medidorId.trim()) return flash('Selecciona zona, vehículo y medidor');
+    const vehiculo = resolverVehiculoOperativo({ jornada: form, zona: zonaActual, vehiculos });
+    const medidor = resolverMedidorOperativo({ jornada: form, zona: zonaActual, vehiculo, medidores, medicion });
+    if (!form.zonaId || !vehiculo.id || !medidor.id) return flash('La zona no tiene vehículo y medidor configurados; solicita a ADMIN completar la asignación');
     if (!Number.isFinite(inicio) || inicio < 0) return flash('Captura una lectura inicial válida');
     if (!Number.isFinite(aguaCargadaLitros) || aguaCargadaLitros <= 0) return flash('Captura los litros de agua cargados');
     if (lecturaAnterior !== null && inicio < Number(lecturaAnterior)) return flash('La lectura inicial no puede ser menor que la última lectura registrada');
@@ -46,21 +73,21 @@ function JornadaMedidor({ zonas = [], jornadas = [], notas = [], clientes = [], 
       const escribirInicio = tx => {
         tx.set(jornadaRef, {
           estado: 'abierta', repartidorId: currentUser.uid, repartidorNombre: currentUser.nombre || '',
-          zonaId: form.zonaId, zonaNombre: zonaActual?.nombre || '', vehiculo: form.vehiculo.trim(), vehiculoId: form.vehiculo.trim(), medidorId: form.medidorId.trim(),
+          zonaId: form.zonaId, zonaNombre: zonaActual?.nombre || '', vehiculo: vehiculo.nombre, vehiculoId: vehiculo.id, vehiculoNombre: vehiculo.nombre, medidorId: medidor.id, medidorNombre: medidor.nombre,
           lecturaAnterior: lecturaAnterior === null ? null : Number(lecturaAnterior), lecturaInicial: inicio, lecturaActual: inicio, lecturaCalculadaActual: inicio,
           aguaCargadaLitros, aguaDisponibleLitros: aguaCargadaLitros, litrosMedidos: null, litrosVendidos: 0, litrosVendidosAcumulados: 0, otrasSalidasLitros: 0, diferenciaLitros: null,
-          unidadComercial, litrosPorUnidad, incrementoContadorPorUnidad, precioPorUnidad, creadoOffline: typeof navigator !== 'undefined' && !navigator.onLine
+          unidadComercial, litrosPorUnidad, incrementoContadorPorUnidad, precioPorUnidad, medidorDigitos: medidor.digitos, medidorLitrosPorIncremento: medidor.litrosPorIncremento, creadoOffline: typeof navigator !== 'undefined' && !navigator.onLine
         });
         tx.set(lecturaInicialRef, {
           jornadaId: jornadaRef.id, tipo: 'inicial', lecturaFisica: true, valor: inicio, valorAnterior: lecturaAnterior === null ? null : Number(lecturaAnterior),
           fechaHora: fechaInicio, usuarioUid: currentUser.uid, usuarioNombre: currentUser.nombre || '',
-          vehiculo: form.vehiculo.trim(), vehiculoId: form.vehiculo.trim(), medidorId: form.medidorId.trim(), zonaId: form.zonaId, operacion: 'apertura_jornada'
+          vehiculo: vehiculo.nombre, vehiculoId: vehiculo.id, vehiculoNombre: vehiculo.nombre, medidorId: medidor.id, medidorNombre: medidor.nombre, medidorDigitos: medidor.digitos, medidorLitrosPorIncremento: medidor.litrosPorIncremento, zonaId: form.zonaId, operacion: 'apertura_jornada'
         });
       };
       if (typeof navigator !== 'undefined' && navigator.onLine) await db.runTransaction(async tx => escribirInicio(tx));
       else { const batch = db.batch(); escribirInicio(batch); await batch.commit(); }
       if (typeof appClearDraft === 'function') appClearDraft('jornada', currentUser?.uid);
-      setForm({ zonaId: '', vehiculo: '', medidorId: '', lecturaInicial: '', aguaCargadaLitros: '' });
+      setForm({ zonaId: '', vehiculoId: '', vehiculo: '', vehiculoNombre: '', medidorId: '', medidorNombre: '', lecturaInicial: '', aguaCargadaLitros: '' });
       flash('Jornada iniciada');
     } catch (e) { flash('No se pudo iniciar la jornada: ' + e.message); }
   };
@@ -133,8 +160,8 @@ function JornadaMedidor({ zonas = [], jornadas = [], notas = [], clientes = [], 
         });
         tx.set(lecturaFinalRef, {
           jornadaId: jornadaAbierta.id, tipo: 'final', lecturaFisica: true, valor: final, lecturaCalculadaFinal, fechaHora: fechaCierre,
-          usuarioUid: currentUser.uid, usuarioNombre: currentUser.nombre || '', vehiculo: jornadaAbierta.vehiculo || '', vehiculoId: jornadaAbierta.vehiculoId || jornadaAbierta.vehiculo || '',
-          medidorId: jornadaAbierta.medidorId || '', zonaId: jornadaAbierta.zonaId || '', operacion: 'cierre_jornada'
+          usuarioUid: currentUser.uid, usuarioNombre: currentUser.nombre || '',           vehiculo: jornadaAbierta.vehiculo || '', vehiculoId: jornadaAbierta.vehiculoId || jornadaAbierta.vehiculo || '', vehiculoNombre: jornadaAbierta.vehiculoNombre || jornadaAbierta.vehiculo || '',
+          medidorId: jornadaAbierta.medidorId || '', medidorNombre: jornadaAbierta.medidorNombre || '', medidorDigitos: jornadaAbierta.medidorDigitos ?? null, medidorLitrosPorIncremento: jornadaAbierta.medidorLitrosPorIncremento ?? null, zonaId: jornadaAbierta.zonaId || '', operacion: 'cierre_jornada'
         });
       };
       if (typeof navigator !== 'undefined' && navigator.onLine) await db.runTransaction(async tx => escribirCierre(tx));
@@ -151,7 +178,7 @@ function JornadaMedidor({ zonas = [], jornadas = [], notas = [], clientes = [], 
     jornadaAbierta ? React.createElement('div', { style: { background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, padding: 14 } },
       React.createElement('div', { style: { fontSize: 11, color: 'var(--ink-faint)', fontWeight: 800 } }, 'JORNADA ABIERTA'),
       React.createElement('div', { style: { fontSize: 18, fontWeight: 800, margin: '5px 0' } }, jornadaAbierta.zonaNombre || 'Zona'),
-      React.createElement('div', { style: { color: 'var(--ink-soft)', fontSize: 12, marginBottom: 5 } }, '🚚 ', jornadaAbierta.vehiculo, ' · Medidor: ', jornadaAbierta.medidorId || '—'),
+      React.createElement('div', { style: { color: 'var(--ink-soft)', fontSize: 12, marginBottom: 5 } }, '🚚 ', jornadaAbierta.vehiculoNombre || jornadaAbierta.vehiculo || jornadaAbierta.vehiculoId || '—', ' · Medidor: ', jornadaAbierta.medidorNombre || jornadaAbierta.medidorId || '—'),
       React.createElement('div', { style: { color: 'var(--ink-soft)', fontSize: 12, marginBottom: 12 } }, 'Escala: 1 ', jornadaAbierta.unidadComercial || unidadComercial, ' = ', Number(jornadaAbierta.litrosPorUnidad || litrosPorUnidad).toFixed(2), ' L y +', Number(jornadaAbierta.incrementoContadorPorUnidad || incrementoContadorPorUnidad).toFixed(4), ' contador físico'),
       React.createElement('div', { style: { color: 'var(--ink-soft)', fontSize: 12, marginBottom: 8 } }, 'Lectura anterior: ', jornadaAbierta.lecturaAnterior ?? 'Sin registro', ' · Inicial: ', jornadaAbierta.lecturaInicial),
       React.createElement('div', { style: { background: 'var(--surface-2)', borderRadius: 9, padding: 10, marginBottom: 10 } },
@@ -172,8 +199,9 @@ function JornadaMedidor({ zonas = [], jornadas = [], notas = [], clientes = [], 
       React.createElement('div', { style: { fontSize: 12, fontWeight: 800, marginBottom: 10 } }, 'INICIAR JORNADA'),
       React.createElement('select', { value: form.zonaId, onChange: e => seleccionarZona(e.target.value), style: { width: '100%', padding: 11, marginBottom: 9, borderRadius: 8, border: '1px solid var(--line-strong)', background: 'var(--surface)', color: 'var(--ink)' } }, React.createElement('option', { value: '' }, 'Selecciona zona'), zonasDisponibles.map(z => React.createElement('option', { key: z.id, value: z.id }, z.nombre))),
       React.createElement('div', { style: { background: 'var(--surface-2)', padding: 9, borderRadius: 8, fontSize: 11, marginBottom: 9 } }, 'Última lectura registrada: ', lecturaAnterior === null ? 'Sin registro' : lecturaAnterior, ' (solo lectura)'),
-      React.createElement('div', { style: { background: 'var(--surface-2)', padding: 9, borderRadius: 8, fontSize: 12, marginBottom: 9 } }, 'Vehículo asignado: ', form.vehiculo || 'Selecciona una zona'),
-      React.createElement('div', { style: { background: 'var(--surface-2)', padding: 9, borderRadius: 8, fontSize: 12, marginBottom: 9 } }, 'Medidor asociado: ', form.medidorId || 'Selecciona una zona'),
+      React.createElement('div', { style: { background: 'var(--surface-2)', padding: 9, borderRadius: 8, fontSize: 12, marginBottom: 9 } }, 'Vehículo asignado: ', form.vehiculoNombre || form.vehiculo || 'Selecciona una zona', ' · ID: ', form.vehiculoId || 'pendiente'),
+      React.createElement('div', { style: { background: 'var(--surface-2)', padding: 9, borderRadius: 8, fontSize: 12, marginBottom: 9 } }, 'Medidor asociado: ', form.medidorNombre || form.medidorId || 'Selecciona una zona', ' · ID: ', form.medidorId || 'pendiente'),
+      React.createElement('div', { style: { background: 'var(--info-bg)', padding: 9, borderRadius: 8, fontSize: 11, marginBottom: 9, color: 'var(--info-text)' } }, 'Escala física: ', medidorActual.digitos, ' dígitos · el sexto dígito incrementa cada ', medidorActual.litrosPorIncremento, ' L'),
       React.createElement('input', { value: form.lecturaInicial, onChange: e => setForm(f => ({ ...f, lecturaInicial: e.target.value })), inputMode: 'decimal', placeholder: 'Lectura inicial física del medidor', style: { width: '100%', padding: 11, boxSizing: 'border-box', borderRadius: 8, border: '1px solid var(--line-strong)', background: 'var(--surface)', color: 'var(--ink)', marginBottom: 10 } }),
       React.createElement('input', { value: form.aguaCargadaLitros, onChange: e => setForm(f => ({ ...f, aguaCargadaLitros: e.target.value })), inputMode: 'decimal', type: 'number', min: 0.01, step: 0.01, placeholder: 'Litros cargados en el vehículo', style: { width: '100%', padding: 11, boxSizing: 'border-box', borderRadius: 8, border: '1px solid var(--line-strong)', background: 'var(--surface)', color: 'var(--ink)', marginBottom: 10 } }),
       React.createElement('button', { onClick: iniciar, style: { width: '100%', padding: 14, border: 0, borderRadius: 9, background: 'var(--accent)', color: 'var(--ink)', fontWeight: 800 } }, 'Iniciar jornada')

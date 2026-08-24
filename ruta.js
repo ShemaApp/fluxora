@@ -6,6 +6,8 @@ function FlujoChoferRapido({
   jornadas = [],
   medicion = null,
   tarifas = [],
+  vehiculos = [],
+  medidores = [],
   currentUser = {}
 }) {
   const [paso, setPaso] = useState(1);
@@ -31,6 +33,12 @@ function FlujoChoferRapido({
   const zonasDeTrabajo = zonaDeRuta ? [zonaDeRuta] : zonasAsignadas;
   const zonaIds = new Set(zonasDeTrabajo.map(z => z.id));
   const zona = zonasDeTrabajo.map(z => z.nombre).join(', ') || ruta?.zona || 'Ruta del día';
+  const vehiculoRuta = resolverVehiculoOperativo({ jornada: jornadaActiva, zona: zonaDeRuta, vehiculos });
+  const medidorRuta = resolverMedidorOperativo({ jornada: jornadaActiva, zona: zonaDeRuta, vehiculo: vehiculoRuta, medidores, medicion });
+  const vehiculoIdRuta = vehiculoRuta.id || jornadaActiva?.vehiculoId || '';
+  const medidorIdRuta = medidorRuta.id || jornadaActiva?.medidorId || '';
+  const vehiculoNombreRuta = vehiculoRuta.nombre || jornadaActiva?.vehiculoNombre || jornadaActiva?.vehiculo || vehiculoIdRuta || 'Pendiente';
+  const medidorNombreRuta = medidorRuta.nombre || jornadaActiva?.medidorNombre || medidorIdRuta || 'Pendiente';
   const productosAgua = (productos || []).filter(p => p.activo !== false && /garraf|agua|20 ?l|purific/i.test(`${p.nombre || ''} ${p.unidad || ''}`));
   const producto = productosAgua[0] || productos.find(p => p.activo !== false) || { id: 'garrafones', nombre: 'Garrafones', unidad: 'garrafón', precio: 0 };
   const litrosPorUnidad = Number(jornadaActiva?.litrosPorUnidad ?? medicion?.litrosPorUnidad ?? 20);
@@ -128,7 +136,7 @@ function FlujoChoferRapido({
   };
   const guardarVenta = async () => {
     const aguaDisponibleAntes = Number(aguaDisponibleRuta === '' ? (jornadaActiva?.aguaDisponibleLitros ?? jornadaActiva?.aguaCargadaLitros ?? 0) : aguaDisponibleRuta);
-    if (!cliente || !jornadaActiva || !Number.isFinite(lecturaAntesNumero) || !Number.isFinite(cantidadNumero) || cantidadNumero <= 0 || !Number.isFinite(lecturaCalculadaNumero) || !formaPago) { mostrar('Captura una cantidad comercial válida y confirma la jornada activa'); return; }
+    if (!cliente || !jornadaActiva || !vehiculoIdRuta || !medidorIdRuta || !Number.isFinite(lecturaAntesNumero) || !Number.isFinite(cantidadNumero) || cantidadNumero <= 0 || !Number.isFinite(lecturaCalculadaNumero) || !formaPago) { mostrar('Captura una cantidad comercial válida y confirma la jornada con vehículo y medidor asignados'); return; }
     if (!Number.isFinite(aguaDisponibleAntes) || aguaDisponibleAntes <= 0 || litrosDespachados > aguaDisponibleAntes + 1e-9) { mostrar(`Agua insuficiente. Disponible: ${Math.max(0, aguaDisponibleAntes).toFixed(2)} L`); return; }
     if (medicion && (medicion.unidadActivo === false || medicion.medidorActivo === false)) { mostrar('La configuración de medición está inactiva; solicita a ADMIN que la habilite'); return; }
     setGuardando(true);
@@ -143,9 +151,11 @@ function FlujoChoferRapido({
         transferenciaId: null,
         rutaId: null,
         jornadaId: jornadaActiva.id,
-        vehiculoId: jornadaActiva.vehiculoId || jornadaActiva.vehiculo || '',
-        vehiculo: jornadaActiva.vehiculo || '',
-        medidorId: jornadaActiva.medidorId || '',
+        vehiculoId: vehiculoIdRuta,
+        vehiculo: vehiculoNombreRuta,
+        vehiculoNombre: vehiculoNombreRuta,
+        medidorId: medidorIdRuta,
+        medidorNombre: medidorNombreRuta,
         localidadId: cliente.localidadId || cliente.localidad || '',
         lecturaAntesVenta: lecturaAntesNumero,
         lecturaDespuesVenta: lecturaCalculadaNumero,
@@ -210,6 +220,7 @@ function FlujoChoferRapido({
     mensaje && React.createElement('div', { style: { padding: '10px 12px', borderRadius: 10, background: color.ok, color: color.okText, fontSize: 12, fontWeight: 700, margin: '10px 0' } }, mensaje),
     jornadaActiva && React.createElement('div', { style: { background: color.surface, border: `1px solid ${color.line}`, borderRadius: 12, padding: 11, margin: '10px 0 14px' } }, React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 800 } }, React.createElement('span', null, 'AGUA DISPONIBLE'), React.createElement('span', { style: { color: porcentajeAgua <= 15 ? 'var(--danger-text)' : color.okText } }, aguaDisponibleNumero.toFixed(2), ' L')), React.createElement('div', { style: { height: 8, background: color.line, borderRadius: 8, overflow: 'hidden', marginTop: 7 } }, React.createElement('div', { style: { height: '100%', width: `${porcentajeAgua}%`, background: porcentajeAgua <= 15 ? 'var(--danger-text)' : color.accent, transition: 'width .18s ease' } })), React.createElement('div', { style: { fontSize: 10, color: color.soft, marginTop: 5 } }, 'Carga inicial: ', aguaCargadaNumero.toFixed(2), ' L · Lectura calculada: ', Number(lecturaActualRuta || jornadaActiva.lecturaInicial || 0).toFixed(2), ' contador')),
     paso === 1 && React.createElement(React.Fragment, null,
+      jornadaActiva && React.createElement('div', { style: { background: color.surface, border: `1px solid ${color.line}`, borderRadius: 11, padding: 10, margin: '12px 0 10px' } }, React.createElement('div', { style: { fontSize: 10, color: color.faint, fontWeight: 800, letterSpacing: '.08em' } }, 'ASIGNACIÓN OPERATIVA'), React.createElement('div', { style: { fontSize: 13, fontWeight: 800, marginTop: 4 } }, '🚚 ', vehiculoNombreRuta), React.createElement('div', { style: { fontSize: 11, color: color.soft, marginTop: 3 } }, 'Vehículo ID: ', vehiculoIdRuta, ' · Medidor: ', medidorNombreRuta, ' · Medidor ID: ', medidorIdRuta), React.createElement('div', { style: { fontSize: 10, color: color.soft, marginTop: 4 } }, medidorRuta.digitos, ' dígitos · el sexto dígito incrementa cada ', medidorRuta.litrosPorIncremento, ' L')),
       React.createElement('input', { value: busqueda, onChange: e => setBusqueda(e.target.value), placeholder: 'Buscar por nombre, ID o dirección…', style: { width: '100%', boxSizing: 'border-box', padding: '13px 14px', border: `1px solid ${color.line}`, borderRadius: 11, background: color.surface, color: color.ink, fontSize: 14, margin: '14px 0 10px' }, autoFocus: true }),
       React.createElement('div', { style: { fontSize: 11, fontWeight: 800, color: color.faint, letterSpacing: '.08em', margin: '12px 2px 8px' } }, 'CLIENTES · ', clientesFiltrados.length),
       React.createElement('div', null, clientesFiltrados.map(c => React.createElement('button', { key: c.id, onClick: () => seleccionarCliente(c), style: { width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, border: `1px solid ${atendido(c) ? 'var(--ok)' : color.line}`, background: atendido(c) ? color.ok : color.surface, borderRadius: 12, padding: '13px 12px', marginBottom: 8, cursor: 'pointer', color: color.ink } }, React.createElement('span', { style: { minWidth: 0 } }, React.createElement('span', { style: { display: 'block', fontWeight: 800, fontSize: 14 } }, c.nombre || 'Cliente sin nombre'), React.createElement('span', { style: { display: 'block', fontSize: 11, color: color.soft, marginTop: 3 } }, 'ID ', c.identificacion || c.id, ' · ', c.domicilio || c.direccion || 'Sin dirección', c.zonaNombre ? ' · ' + c.zonaNombre : '')), React.createElement('span', { style: { fontSize: 22, color: atendido(c) ? 'var(--ok-text)' : color.faint, fontWeight: 800 } }, atendido(c) ? '✓' : '›')))),
@@ -242,6 +253,8 @@ function RutaReparto({
   jornadas = [],
   medicion = null,
   tarifas = [],
+  vehiculos = [],
+  medidores = [],
   currentUser = {}
 }) {
   // Transferencias debe seguir renderizando aunque Firestore todavía no haya
@@ -886,7 +899,7 @@ function RutaReparto({
       flash('❌ No se pudo solicitar la recepción: ' + e.message);
     }
   };
-  if (currentUser.role === 'repartidor') return React.createElement(FlujoChoferRapido, { productos, clientes, rutas, zonas, jornadas, medicion, tarifas, currentUser });
+  if (currentUser.role === 'repartidor') return React.createElement(FlujoChoferRapido, { productos, clientes, rutas, zonas, jornadas, medicion, tarifas, vehiculos, medidores, currentUser });
   return React.createElement("div", {
     style: {
       padding: '16px 12px'

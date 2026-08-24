@@ -3,7 +3,7 @@ function App() {
     currentUser, authChecked, firestoreError,
     locked, setLocked,
     isOnline,
-    productos, clientes, zonas, notas, creditos, rutas, jornadas, medicion, tarifas, pedidos,
+    productos, clientes, zonas, notas, creditos, rutas, jornadas, medicion, tarifas, vehiculos, medidores, pedidos,
     pendCounts, totalPendientes, notificacionesTransferencias,
   } = useSesion();
   const [tab, setTab] = useState('home');
@@ -62,6 +62,8 @@ function App() {
     jornadas,
     medicion,
     tarifas,
+    vehiculos,
+    medidores,
     pedidos,
     notificacionesTransferencias
   };
@@ -279,11 +281,15 @@ function App() {
   }), tab === 'jornada' && React.createElement(JornadaMedidor, {
     ...ctx,
     medicion,
+    vehiculos,
+    medidores,
     currentUser: currentUser,
     onIrA: navegarA
   }), tab === 'ruta' && React.createElement(RutaReparto, {
     ...ctx,
     medicion,
+    vehiculos,
+    medidores,
     currentUser: currentUser
   }), tab === 'jerarquia' && React.createElement(JerarquiaPanel, {
     ...ctx,

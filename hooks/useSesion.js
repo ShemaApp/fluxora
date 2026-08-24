@@ -18,6 +18,8 @@ function useSesion() {
   const [jornadas, setJornadas] = useState([]);
   const [medicion, setMedicion] = useState(null);
   const [tarifas, setTarifas] = useState([]);
+  const [vehiculos, setVehiculos] = useState([]);
+  const [medidores, setMedidores] = useState([]);
   const [pedidos, setPedidos] = useState([]);
   const [pendCounts, setPendCounts] = useState({
     productos: 0,
@@ -28,7 +30,9 @@ function useSesion() {
     rutas: 0,
     jornadas: 0,
     pedidos: 0,
-    tarifas: 0
+    tarifas: 0,
+    vehiculos: 0,
+    medidores: 0
   });
   const totalPendientes = Object.values(pendCounts).reduce((s, n) => s + n, 0);
   const notificacionesTransferencias = (() => {
@@ -148,6 +152,9 @@ function useSesion() {
       console.error('Firestore error:', err);
       setFirestoreError('⚠️ Error de conexión con la base de datos. Revisa tus permisos.');
     };
+    const referenciaErrorHandler = err => {
+      console.warn('Referencias de vehículo/medidor no disponibles todavía:', err);
+    };
     const pend = (col, snap) => setPendCounts(p => ({
       ...p,
       [col]: snap.docs.filter(d => d.metadata.hasPendingWrites).length
@@ -174,10 +181,24 @@ function useSesion() {
       includeMetadataChanges: true
     }, snap => {
       const lista = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      lista.sort((a, b) => String(a.nombre || '').localeCompare(String(b.nombre || ''), 'es'));
+      lista.sort((a, b) => String(a.nombre || a.codigo || '').localeCompare(String(b.nombre || b.codigo || ''), 'es'));
       setTarifas(lista);
       pend('tarifas', snap);
-    }, errorHandler), db.collection(COLECCIONES.PRODUCTOS).onSnapshot({
+    }, errorHandler), db.collection(COLECCIONES.VEHICULOS).onSnapshot({
+      includeMetadataChanges: true
+    }, snap => {
+      const lista = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      lista.sort((a, b) => String(a.nombre || a.codigo || '').localeCompare(String(b.nombre || b.codigo || ''), 'es'));
+      setVehiculos(lista);
+      pend('vehiculos', snap);
+    }, referenciaErrorHandler), db.collection(COLECCIONES.MEDIDORES).onSnapshot({
+      includeMetadataChanges: true
+    }, snap => {
+      const lista = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      lista.sort((a, b) => String(a.nombre || a.codigo || '').localeCompare(String(b.nombre || b.codigo || ''), 'es'));
+      setMedidores(lista);
+      pend('medidores', snap);
+    }, referenciaErrorHandler), db.collection(COLECCIONES.PRODUCTOS).onSnapshot({
       includeMetadataChanges: true
     }, snap => {
       setProductos(snap.docs.map(d => ({
@@ -246,7 +267,7 @@ function useSesion() {
     currentUser, authChecked, firestoreError,
     locked, setLocked,
     isOnline,
-    productos, clientes, zonas, notas, creditos, rutas, jornadas, medicion, tarifas, pedidos,
+    productos, clientes, zonas, notas, creditos, rutas, jornadas, medicion, tarifas, vehiculos, medidores, pedidos,
     pendCounts, totalPendientes, notificacionesTransferencias,
   };
 }
