@@ -18,13 +18,15 @@ function App() {
     if (typeof appSuscribirVentasOffline !== 'function') return undefined;
     return appSuscribirVentasOffline(setOfflineVentaResumen);
   }, []);
-  const ALL_TABS = [['home', '🏠', 'Inicio'], ['nota', '📋', 'Venta administrativa'], ['clientes', '👥', 'Clientes fijos'], ['creditos', '💳', 'Créditos / Abonos'], ['ruta', '🚚', currentUser?.role === 'repartidor' ? 'Mi Ruta' : 'Cargas / Transferencias'], ['jornada', '⏱', currentUser?.role === 'repartidor' ? 'Mi Jornada' : 'Conciliaciones'], ['repartidores', '🧭', 'Repartidores / Cargas'], ['productos', '📦', 'Productos / Tarifas'], ['inventario', '📋', 'Inventario de agua'], ['reportes', '📈', 'Reportes operativos'], ['gerencia', '💰', 'Caja'], ['jerarquia', '🏢', 'Asignaciones / Localidades'], ['privacidad', '🛡️', 'Privacidad']];
+  const esAdmin = currentUser?.role === 'admin';
+  const esRepartidor = currentUser?.role === 'repartidor';
+  const ALL_TABS = [['home', '🏠', 'Inicio'], ['nota', '📋', 'Venta administrativa'], ['clientes', '👥', 'Clientes fijos'], ['creditos', '💳', 'Créditos / Abonos'], ['ruta', '🚚', esRepartidor ? 'Mi Ruta' : 'Cargas / Transferencias'], ['jornada', '⏱', esRepartidor ? 'Mi Jornada' : 'Conciliaciones'], ['repartidores', '🧭', 'Repartidores / Cargas'], ['productos', '📦', 'Productos / Tarifas'], ['inventario', '📋', 'Inventario de agua'], ['reportes', '📈', 'Reportes operativos'], ['gerencia', '💰', 'Caja'], ['jerarquia', '🏢', 'Asignaciones / Localidades'], ['privacidad', '🛡️', 'Privacidad']];
   const permTabs = permisoTabs(currentUser);
-  const tabsPermitidos = ['home', 'privacidad', ...ALL_TABS.filter(([id]) => id !== 'home' && id !== 'privacidad' && permTabs[id]).map(([id]) => id)];
+  const tabsPermitidos = esRepartidor ? ['home', 'ruta', 'jornada'] : ['home', 'privacidad', ...ALL_TABS.filter(([id]) => id !== 'home' && id !== 'privacidad' && permTabs[id]).map(([id]) => id)];
   const TABS = ALL_TABS.filter(([id]) => tabsPermitidos.includes(id));
   useEffect(() => {
     if (!currentUser) return;
-    if (tab !== 'config' && !tabsPermitidos.includes(tab)) {
+    if ((!esAdmin && tab === 'config') || !tabsPermitidos.includes(tab)) {
       historialTabs.current = [];
       setTab(tabsPermitidos[0]);
     }
@@ -36,6 +38,7 @@ function App() {
       destino = 'config';
     }
     if (!destino) return;
+    if (destino === 'config' && !esAdmin) return;
     if (destino !== 'home' && destino !== 'config' && !tabsPermitidos.includes(destino)) return;
     if (destino === 'nota' && !opciones.conservarModoNota) setModoNota('pedidos');
     if (destino === tab) return;
@@ -46,7 +49,10 @@ function App() {
     setNavOpen(false);
     setTab(historialTabs.current.pop() || 'home');
   };
-  const goConfig = () => navegarA('config');
+  const goConfig = () => {
+    if (!esAdmin) return;
+    navegarA('config');
+  };
   const goPrivacidad = () => navegarA('privacidad');
   const logout = () => {
     auth.signOut();
@@ -65,7 +71,8 @@ function App() {
     vehiculos,
     medidores,
     pedidos,
-    notificacionesTransferencias
+    notificacionesTransferencias,
+    offlineVentaResumen
   };
   if (!authChecked) return React.createElement("div", {
     style: {
@@ -158,7 +165,7 @@ function App() {
     style: {
       gap: 6
     }
-  }, notificacionesTransferencias.length > 0 && React.createElement("button", {
+  },     esAdmin && notificacionesTransferencias.length > 0 && React.createElement("button", {
     onClick: () => navegarA('ruta'),
     title: 'Ver transferencias pendientes',
     'aria-label': 'Ver transferencias pendientes',
@@ -191,8 +198,10 @@ function App() {
       fontSize: 12,
       color: 'var(--rail-ink-faint)'
     }
-  }, "Hola, ", currentUser.nombre.split(' ')[0]), React.createElement("button", {
+  }, "Hola, ", currentUser.nombre.split(' ')[0]), esAdmin ? React.createElement("button", {
     onClick: goConfig,
+    title: 'Configuración administrativa',
+    'aria-label': 'Configuración administrativa',
     style: {
       background: tab === 'config' ? 'var(--rail-border)' : 'none',
       border: 'none',
@@ -203,7 +212,23 @@ function App() {
       display: 'flex',
       alignItems: 'center'
     }
-  }, React.createElement(Gear, null)))), React.createElement("div", {
+  }, React.createElement(Gear, null)) : React.createElement("button", {
+    onClick: logout,
+    title: 'Cerrar sesión',
+    'aria-label': 'Cerrar sesión',
+    style: {
+      background: 'none',
+      border: 'none',
+      color: 'var(--rail-ink-faint)',
+      cursor: 'pointer',
+      borderRadius: 3,
+      padding: '5px 7px',
+      display: 'flex',
+      alignItems: 'center',
+      fontSize: 12,
+      fontWeight: 700
+    }
+  }, 'Salir'))), React.createElement("div", {
     className: 'app-accent-bar',
     style: {
       position: 'fixed',
@@ -308,7 +333,7 @@ function App() {
   }), tab === 'gerencia' && React.createElement(Gerencia, {
     ...ctx,
     currentUser: currentUser
-  }), tab === 'config' && React.createElement(Configuracion, {
+  }), tab === 'config' && esAdmin && React.createElement(Configuracion, {
     currentUser: currentUser,
     medicion,
     tarifas,

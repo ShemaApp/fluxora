@@ -48,8 +48,10 @@ function Dashboard({
   creditos,
   clientes,
   rutas,
+  jornadas = [],
   currentUser,
   notificacionesTransferencias = [],
+  offlineVentaResumen = { registros: [] },
   onIrA,
   onVentaRapida
 }) {
@@ -80,6 +82,36 @@ function Dashboard({
   const miVentaEfectivoHoy = misNotasHoy.filter(n => esEfectivo(n.formaPago)).reduce((s, n) => s + n.total, 0);
   const misClientesHoy = new Set(misNotasHoy.map(n => n.clienteId)).size;
   const rutaActiva = (rutas || []).find(r => r.estado === 'activa' && (!isRepartidor || r.repartidorId === currentUser.uid));
+  if (isRepartidor) {
+    const jornadaActiva = (jornadas || []).find(j => j.estado === 'abierta' && j.repartidorId === currentUser.uid);
+    const notasJornada = jornadaActiva ? (notas || []).filter(n => n.jornadaId === jornadaActiva.id && n.capturadoPorUid === currentUser.uid) : [];
+    const estadosPendientes = ['pendiente', 'reintentando', 'requiere_revision', 'incidencia_inventario'];
+    const ventasOfflineJornada = jornadaActiva ? (offlineVentaResumen.registros || []).filter(v => v.jornadaId === jornadaActiva.id && estadosPendientes.includes(v.estado)) : [];
+    const ventasJornada = notasJornada.concat(ventasOfflineJornada);
+    const litrosDeNotas = ventasJornada.reduce((suma, venta) => suma + Number(venta.litrosVendidos || (venta.items || []).reduce((subtotal, item) => subtotal + Number(item.litrosVendidos || item.litros || 0), 0)), 0);
+    const litrosVendidosRemotos = Number(jornadaActiva?.litrosVendidosAcumulados ?? jornadaActiva?.litrosVendidos ?? 0);
+    const litrosVendidos = jornadaActiva ? Math.max(litrosVendidosRemotos, litrosDeNotas) : 0;
+    const garrafonesVendidos = ventasJornada.reduce((suma, venta) => suma + Number(venta.garrafones || (venta.items || []).reduce((subtotal, item) => subtotal + Number(item.cant || 0), 0)), 0);
+    const litrosCargados = Number(jornadaActiva?.aguaCargadaLitros || 0);
+    const litrosPendientesLocales = ventasOfflineJornada.reduce((suma, venta) => suma + Number(venta.litrosVendidos || 0), 0);
+    const litrosDisponibles = jornadaActiva ? Math.max(0, Number(jornadaActiva.aguaDisponibleLitros ?? litrosCargados) - litrosPendientesLocales) : 0;
+    const incrementoPendiente = ventasOfflineJornada.reduce((suma, venta) => suma + Number(venta.incrementoContador || 0), 0);
+    const medidorRemoto = Number(jornadaActiva?.lecturaCalculadaActual ?? jornadaActiva?.lecturaActual ?? jornadaActiva?.lecturaInicial ?? 0);
+    const medidorLogico = jornadaActiva ? medidorRemoto + incrementoPendiente : null;
+    const irAOperacion = id => () => onIrA(id);
+    return React.createElement("div", {
+      className: 'fx-page-home fx-page-home-repartidor',
+      style: { padding: '16px 12px' }
+    }, React.createElement("div", {
+      style: { fontSize: 20, fontWeight: 800, marginBottom: 4 }
+    }, "Operación de jornada"), React.createElement("div", {
+      style: { fontSize: 12, color: 'var(--ink-soft)', lineHeight: 1.45, marginBottom: 14 }
+    }, "Lectura física solo al abrir y cerrar. Durante las ventas, el sistema mantiene el medidor lógico acumulado y calcula los litros según la configuración vigente de la jornada."), !jornadaActiva && React.createElement(Card, {
+      style: { marginBottom: 14, background: 'var(--info-bg)', color: 'var(--info-text)' }
+    }, React.createElement("div", { style: { fontSize: 12, fontWeight: 800, marginBottom: 5 } }, "JORNADA NO INICIADA"), React.createElement("div", { style: { fontSize: 12, lineHeight: 1.4 } }, "Selecciona el vehículo asignado, registra la carga en litros y captura la lectura física inicial para comenzar.")), jornadaActiva && React.createElement(Card, {
+      style: { marginBottom: 14 }
+    }, React.createElement(Row, { style: { justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, marginBottom: 9 } }, React.createElement("div", null, React.createElement("div", { style: { fontSize: 10, color: 'var(--ink-faint)', fontWeight: 800, letterSpacing: '.08em' } }, "JORNADA ABIERTA"), React.createElement("div", { style: { fontSize: 17, fontWeight: 800, marginTop: 3 } }, jornadaActiva.localidadNombre || jornadaActiva.localidad || 'Localidad asignada')), React.createElement(Tag, { color: 'var(--ok-text)' }, 'Activa')), React.createElement("div", { style: { fontSize: 11, color: 'var(--ink-soft)', marginBottom: 10 } }, 'Vehículo: ', jornadaActiva.vehiculoNombre || jornadaActiva.vehiculo || jornadaActiva.vehiculoId || '—', ' · Medidor: ', jornadaActiva.medidorNombre || jornadaActiva.medidorId || '—'), React.createElement("div", { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 } }, React.createElement(StatTile, { value: litrosCargados.toFixed(2) + ' L', label: 'Litros cargados', bg: 'var(--rail)', color: 'var(--rail-ink)' }), React.createElement(StatTile, { value: litrosVendidos.toFixed(2) + ' L', label: 'Litros vendidos', bg: 'var(--accent)', color: 'var(--accent-ink)' }), React.createElement(StatTile, { value: litrosDisponibles.toFixed(2) + ' L', label: 'Litros disponibles', bg: litrosDisponibles <= litrosCargados * .15 ? 'var(--danger)' : 'var(--ok)', color: '#fff' }), React.createElement(StatTile, { value: garrafonesVendidos.toFixed(2), label: 'Garrafones vendidos', bg: 'var(--info)', color: '#fff' }), React.createElement(StatTile, { value: medidorLogico === null ? '—' : medidorLogico.toFixed(2), label: 'Medidor lógico acumulado', bg: 'var(--surface-2)', color: 'var(--ink)' }))), !jornadaActiva && React.createElement("div", { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 } }, React.createElement("button", { onClick: irAOperacion('jornada'), style: { minHeight: 58, border: 0, borderRadius: 10, background: 'var(--accent)', color: 'var(--ink)', fontWeight: 900 } }, 'Iniciar jornada'), React.createElement("button", { onClick: irAOperacion('jornada'), style: { minHeight: 58, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--ink-soft)', borderRadius: 10, fontWeight: 800 } }, 'Ver asignación')), jornadaActiva && React.createElement("div", { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 } }, React.createElement("button", { onClick: irAOperacion('ruta'), style: { minHeight: 58, border: 0, borderRadius: 10, background: 'var(--accent)', color: 'var(--ink)', fontWeight: 900 } }, 'Abrir Mi ruta'), React.createElement("button", { onClick: irAOperacion('jornada'), style: { minHeight: 58, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--ink)', borderRadius: 10, fontWeight: 800 } }, 'Cerrar jornada')), React.createElement("div", { style: { fontSize: 11, color: 'var(--ink-faint)', lineHeight: 1.45 } }, 'Flujo operativo: jornada → carga y lectura inicial → Mi ruta → garrafones → efectivo o crédito → siguiente cliente → lectura física final y conciliación.'));
+  }
   const irA = id => () => {
     if (tabsPermitidos[id]) onIrA(id);
   };

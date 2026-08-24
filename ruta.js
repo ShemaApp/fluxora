@@ -4,6 +4,8 @@ function FlujoChoferRapido({
   rutas = [],
   localidades = [],
   jornadas = [],
+  notas = [],
+  offlineVentaResumen = { registros: [] },
   medicion = null,
   tarifas = [],
   vehiculos = [],
@@ -210,6 +212,12 @@ function FlujoChoferRapido({
   const aguaCargadaNumero = Number(jornadaActiva?.aguaCargadaLitros || 0);
   const aguaDisponibleNumero = Math.max(0, Number(aguaDisponibleRuta === '' ? (jornadaActiva?.aguaDisponibleLitros ?? aguaCargadaNumero) : aguaDisponibleRuta) || 0);
   const porcentajeAgua = aguaCargadaNumero > 0 ? Math.max(0, Math.min(100, aguaDisponibleNumero / aguaCargadaNumero * 100)) : 0;
+  const estadosVentaOffline = ['pendiente', 'reintentando', 'requiere_revision', 'incidencia_inventario'];
+  const ventasOfflineJornada = (offlineVentaResumen.registros || []).filter(venta => venta.jornadaId === jornadaActiva?.id && estadosVentaOffline.includes(venta.estado));
+  const ventasJornada = (notas || []).filter(venta => venta.jornadaId === jornadaActiva?.id).concat(ventasOfflineJornada);
+  const litrosVendidosRuta = jornadaActiva ? Math.max(Number(jornadaActiva.litrosVendidosAcumulados ?? jornadaActiva.litrosVendidos ?? 0), ventasJornada.reduce((suma, venta) => suma + Number(venta.litrosVendidos || (venta.items || []).reduce((subtotal, item) => subtotal + Number(item.litrosVendidos || item.litros || 0), 0)), 0)) : 0;
+  const garrafonesVendidosRuta = ventasJornada.reduce((suma, venta) => suma + Number(venta.garrafones || (venta.items || []).reduce((subtotal, item) => subtotal + Number(item.cant || 0), 0)), 0);
+  const medidorLogicoRuta = jornadaActiva ? Number(jornadaActiva.lecturaCalculadaActual ?? jornadaActiva.lecturaActual ?? jornadaActiva.lecturaInicial ?? 0) + ventasOfflineJornada.reduce((suma, venta) => suma + Number(venta.incrementoContador || 0), 0) : null;
   const color = { ink: 'var(--ink)', soft: 'var(--ink-soft)', faint: 'var(--ink-faint)', line: 'var(--line)', surface: 'var(--surface)', accent: 'var(--accent)', ok: 'var(--ok-bg)', okText: 'var(--ok-text)' };
 
   return React.createElement('div', { className: 'fx-page-route', style: { padding: '14px 12px 28px' } },
@@ -217,7 +225,7 @@ function FlujoChoferRapido({
       React.createElement('div', null, React.createElement('div', { style: { fontSize: 21, fontWeight: 800, letterSpacing: '-.02em' } }, 'Ruta del día'), React.createElement('div', { style: { fontSize: 12, color: color.soft, marginTop: 3 } }, localidad)), React.createElement('div', { style: { fontSize: 11, color: color.soft, textAlign: 'right' } }, 'PASO ', paso, ' DE 3', React.createElement('div', { style: { marginTop: 5, height: 4, width: 72, background: color.line, borderRadius: 5, overflow: 'hidden' } }, React.createElement('div', { style: { height: '100%', width: `${paso * 33.333}%`, background: color.accent } })))
     ),
     mensaje && React.createElement('div', { style: { padding: '10px 12px', borderRadius: 10, background: color.ok, color: color.okText, fontSize: 12, fontWeight: 700, margin: '10px 0' } }, mensaje),
-    jornadaActiva && React.createElement('div', { style: { background: color.surface, border: `1px solid ${color.line}`, borderRadius: 12, padding: 11, margin: '10px 0 14px' } }, React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 800 } }, React.createElement('span', null, 'AGUA DISPONIBLE'), React.createElement('span', { style: { color: porcentajeAgua <= 15 ? 'var(--danger-text)' : color.okText } }, aguaDisponibleNumero.toFixed(2), ' L')), React.createElement('div', { style: { height: 8, background: color.line, borderRadius: 8, overflow: 'hidden', marginTop: 7 } }, React.createElement('div', { style: { height: '100%', width: `${porcentajeAgua}%`, background: porcentajeAgua <= 15 ? 'var(--danger-text)' : color.accent, transition: 'width .18s ease' } })), React.createElement('div', { style: { fontSize: 10, color: color.soft, marginTop: 5 } }, 'Carga inicial: ', aguaCargadaNumero.toFixed(2), ' L · Lectura calculada: ', Number(lecturaActualRuta || jornadaActiva.lecturaInicial || 0).toFixed(2), ' contador')),
+    jornadaActiva && React.createElement('div', { style: { background: color.surface, border: `1px solid ${color.line}`, borderRadius: 12, padding: 11, margin: '10px 0 14px' } }, React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 800 } }, React.createElement('span', null, 'AGUA DISPONIBLE'), React.createElement('span', { style: { color: porcentajeAgua <= 15 ? 'var(--danger-text)' : color.okText } }, aguaDisponibleNumero.toFixed(2), ' L')), React.createElement('div', { style: { height: 8, background: color.line, borderRadius: 8, overflow: 'hidden', marginTop: 7 } }, React.createElement('div', { style: { height: '100%', width: `${porcentajeAgua}%`, background: porcentajeAgua <= 15 ? 'var(--danger-text)' : color.accent, transition: 'width .18s ease' } })), React.createElement('div', { style: { fontSize: 10, color: color.soft, marginTop: 8, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 } }, React.createElement('span', null, 'Litros cargados: ', aguaCargadaNumero.toFixed(2), ' L'), React.createElement('span', null, 'Litros vendidos: ', litrosVendidosRuta.toFixed(2), ' L'), React.createElement('span', null, 'Litros disponibles: ', aguaDisponibleNumero.toFixed(2), ' L'), React.createElement('span', null, 'Garrafones vendidos: ', garrafonesVendidosRuta.toFixed(2)), React.createElement('span', { style: { gridColumn: '1 / -1', fontWeight: 800, color: color.ink } }, 'Medidor lógico acumulado: ', medidorLogicoRuta === null ? '—' : medidorLogicoRuta.toFixed(2), ' contador · lectura física solo al cierre'))),
     paso === 1 && React.createElement(React.Fragment, null,
       jornadaActiva && React.createElement('div', { style: { background: color.surface, border: `1px solid ${color.line}`, borderRadius: 11, padding: 10, margin: '12px 0 10px' } }, React.createElement('div', { style: { fontSize: 10, color: color.faint, fontWeight: 800, letterSpacing: '.08em' } }, 'ASIGNACIÓN OPERATIVA'), React.createElement('div', { style: { fontSize: 13, fontWeight: 800, marginTop: 4 } }, '🚚 ', vehiculoNombreRuta), React.createElement('div', { style: { fontSize: 11, color: color.soft, marginTop: 3 } }, 'Vehículo ID: ', vehiculoIdRuta, ' · Medidor: ', medidorNombreRuta, ' · Medidor ID: ', medidorIdRuta), React.createElement('div', { style: { fontSize: 10, color: color.soft, marginTop: 4 } }, medidorRuta.digitos, ' dígitos · el sexto dígito incrementa cada ', medidorRuta.litrosPorIncremento, ' L')),
       React.createElement('input', { value: busqueda, onChange: e => setBusqueda(e.target.value), placeholder: 'Buscar por nombre, ID o dirección…', style: { width: '100%', boxSizing: 'border-box', padding: '13px 14px', border: `1px solid ${color.line}`, borderRadius: 11, background: color.surface, color: color.ink, fontSize: 14, margin: '14px 0 10px' }, autoFocus: true }),
@@ -250,6 +258,8 @@ function RutaReparto({
   localidades = [],
   pedidos = [],
   jornadas = [],
+  notas = [],
+  offlineVentasResumen = { registros: [] },
   medicion = null,
   tarifas = [],
   vehiculos = [],
@@ -262,6 +272,8 @@ function RutaReparto({
   clientes = Array.isArray(clientes) ? clientes : [];
   rutas = Array.isArray(rutas) ? rutas : [];
   localidades = Array.isArray(localidades) ? localidades : [];
+  notas = Array.isArray(notas) ? notas : [];
+  offlineVentasResumen = offlineVentasResumen && Array.isArray(offlineVentasResumen.registros) ? offlineVentasResumen : { registros: [] };
   pedidos = Array.isArray(pedidos) ? pedidos : [];
   currentUser = currentUser || {};
   const runtime = typeof window !== 'undefined' ? window : globalThis;
@@ -902,7 +914,7 @@ function RutaReparto({
       flash('❌ No se pudo solicitar la recepción: ' + e.message);
     }
   };
-  if (currentUser.role === 'repartidor') return React.createElement(FlujoChoferRapido, { productos, clientes, rutas, localidades, jornadas, medicion, tarifas, vehiculos, medidores, currentUser });
+  if (currentUser.role === 'repartidor') return React.createElement(FlujoChoferRapido, { productos, clientes, rutas, localidades, jornadas, notas, offlineVentaResumen: offlineVentasResumen, medicion, tarifas, vehiculos, medidores, currentUser });
   return React.createElement("div", {
     style: {
       padding: '16px 12px'

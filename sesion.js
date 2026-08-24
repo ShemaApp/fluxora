@@ -6,7 +6,7 @@
    y pinKey). */
 
 /* ── Modelo de permisos: constantes de rol + helpers de acceso ── */
-const TABS_INFO = [['nota', '📋', 'Venta administrativa'], ['clientes', '👥', 'Clientes fijos'], ['creditos', '💳', 'Créditos / Abonos'], ['ruta', '🚚', 'Mi Ruta / Cargas'], ['jornada', '⏱', 'Jornada / Conciliación'], ['repartidores', '🧭', 'Repartidores / Cargas'], ['productos', '📦', 'Productos / Tarifas'], ['inventario', '📋', 'Inventario de agua'], ['reportes', '📈', 'Reportes operativos'], ['gerencia', '💰', 'Caja'], ['jerarquia', '🏢', 'Asignaciones / Zonas']];
+const TABS_INFO = [['nota', '📋', 'Venta administrativa'], ['clientes', '👥', 'Clientes fijos'], ['creditos', '💳', 'Créditos / Abonos'], ['ruta', '🚚', 'Mi Ruta'], ['jornada', '⏱', 'Mi Jornada / Cierre'], ['repartidores', '🧭', 'Repartidores / Cargas'], ['productos', '📦', 'Productos / Tarifas'], ['inventario', '📋', 'Inventario de agua'], ['reportes', '📈', 'Reportes operativos'], ['gerencia', '💰', 'Caja'], ['jerarquia', '🏢', 'Asignaciones / Localidades']];
 const EDICION_INFO = [['productos', '📦', 'Editar / dar de alta productos'], ['clientes', '👥', 'Editar / dar de alta clientes'], ['creditos', '💳', 'Registrar abonos a créditos']];
 const ACCIONES_INFO = [['password', '🔑', 'Cambiar su propia contraseña']];
 const ACCIONES_DEFAULT_ROL = {
@@ -53,7 +53,7 @@ const TABS_DEFAULT_ROL = {
     productos: false,
     nota: false,
     clientes: false,
-    creditos: true,
+    creditos: false,
     ruta: true,
     jornada: true,
     repartidores: false,
@@ -71,7 +71,7 @@ const EDITA_DEFAULT_ROL = {
   repartidor: {
     productos: false,
     clientes: false,
-    creditos: true
+    creditos: false
   }
 };
 const permisoTabs = u => {
@@ -83,7 +83,7 @@ const permisoTabs = u => {
     // Capacidades operativas obligatorias del repartidor.
     tabs.nota = false;
     tabs.clientes = false;
-    tabs.creditos = true;
+    tabs.creditos = false;
     tabs.ruta = true;
     tabs.jornada = true;
     tabs.repartidores = false;
@@ -104,7 +104,7 @@ const permisoEdita = u => {
   if (u?.role === 'repartidor') {
     edita.productos = false;
     edita.clientes = false;
-    edita.creditos = true;
+    edita.creditos = false;
   }
   return edita;
 };
