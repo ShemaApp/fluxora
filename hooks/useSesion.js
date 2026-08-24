@@ -14,62 +14,23 @@ function useSesion() {
   const [localidades, setLocalidades] = useState([]);
   const [notas, setNotas] = useState([]);
   const [creditos, setCreditos] = useState([]);
-  const [rutas, setRutas] = useState([]);
   const [jornadas, setJornadas] = useState([]);
   const [medicion, setMedicion] = useState(null);
   const [tarifas, setTarifas] = useState([]);
   const [vehiculos, setVehiculos] = useState([]);
   const [medidores, setMedidores] = useState([]);
-  const [pedidos, setPedidos] = useState([]);
   const [pendCounts, setPendCounts] = useState({
     productos: 0,
     clientes: 0,
     localidades: 0,
     notas: 0,
     creditos: 0,
-    rutas: 0,
     jornadas: 0,
-    pedidos: 0,
     tarifas: 0,
     vehiculos: 0,
     medidores: 0
   });
   const totalPendientes = Object.values(pendCounts).reduce((s, n) => s + n, 0);
-  const notificacionesTransferencias = (() => {
-    if (!currentUser) return [];
-    const avisos = [];
-    const fechaAviso = valor => valor || new Date().toISOString();
-    if (currentUser.role === 'admin') {
-      (rutas || []).filter(r => r.estado === 'pendiente_recepcion').forEach(r => avisos.push({
-        id: 'recepcion-' + r.id,
-        tipo: 'recepcion',
-        titulo: 'Transferencia pendiente de recepción',
-        detalle: `${r.repartidorNombre || 'Repartidor'} tiene mercancía pendiente de conciliar`,
-        fecha: fechaAviso(r.fechaRegresoReal || r.fecha),
-        rutaId: r.id
-      }));
-      (pedidos || []).filter(p => p.estado === 'asignado_pendiente_transferencia').forEach(p => avisos.push({
-        id: 'carga-pedido-' + p.id,
-        tipo: 'carga',
-        titulo: 'Pedido esperando confirmación de transferencia',
-        detalle: `${p.clienteNombre || 'Cliente'} · ${p.repartidorNombre || 'sin repartidor'}`,
-        fecha: fechaAviso(p.fechaActualizacion || p.fechaCreacion),
-        rutaId: null
-      }));
-    }
-    if (currentUser.role === 'repartidor') {
-      (pedidos || []).filter(p => p.estado === 'transferencia_confirmada' && p.repartidorId === currentUser.uid).forEach(p => avisos.push({
-        id: 'entrega-pedido-' + p.id,
-        tipo: 'entrega',
-        titulo: 'Pedido pendiente de entrega',
-        detalle: `${p.clienteNombre || 'Cliente'} · transferencia confirmada`,
-        fecha: fechaAviso(p.fechaConfirmacionTransferencia || p.fechaActualizacion),
-        rutaId: p.transferenciaId || null
-      }));
-    }
-    return avisos.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-  })();
-
   useEffect(() => {
     const on = () => setIsOnline(true),
       off = () => setIsOnline(false);
@@ -159,14 +120,6 @@ function useSesion() {
       ...p,
       [col]: snap.docs.filter(d => d.metadata.hasPendingWrites).length
     }));
-    const rutasQuery = currentUser.role === 'repartidor'
-      ? db.collection(COLECCIONES.RUTAS).where('repartidorId', '==', currentUser.uid)
-      : currentUser.role === 'admin'
-        ? db.collection(COLECCIONES.RUTAS).orderBy('fecha', 'desc').limit(100)
-        : null;
-    const pedidosQuery = currentUser.role === 'repartidor'
-      ? db.collection(COLECCIONES.PEDIDOS).where('repartidorId', '==', currentUser.uid)
-      : db.collection(COLECCIONES.PEDIDOS).orderBy('fechaCreacion', 'desc').limit(500);
     const localidadesQuery = currentUser.role === 'repartidor'
       ? db.collection(COLECCIONES.LOCALIDADES).where('repartidorId', '==', currentUser.uid)
       : db.collection(COLECCIONES.LOCALIDADES);
@@ -233,13 +186,6 @@ function useSesion() {
         ...d.data()
       })));
       pend('creditos', snap);
-    }, errorHandler), pedidosQuery.onSnapshot({
-      includeMetadataChanges: true
-    }, snap => {
-      const lista = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      lista.sort((a, b) => new Date(b.fechaCreacion || 0) - new Date(a.fechaCreacion || 0));
-      setPedidos(lista);
-      pend('pedidos', snap);
     }, errorHandler), ...(jornadasQuery ? [jornadasQuery.onSnapshot({
       includeMetadataChanges: true
     }, snap => {
@@ -247,14 +193,7 @@ function useSesion() {
       lista.sort((a, b) => new Date(b.fechaInicio || 0) - new Date(a.fechaInicio || 0));
       setJornadas(lista);
       pend('jornadas', snap);
-    }, errorHandler)] : [() => setJornadas([])]), ...(rutasQuery ? [rutasQuery.onSnapshot({
-      includeMetadataChanges: true
-    }, snap => {
-      const transferencias = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      transferencias.sort((a, b) => new Date(b.fecha || 0) - new Date(a.fecha || 0));
-      setRutas(transferencias.slice(0, 100));
-      pend('rutas', snap);
-    }, errorHandler)] : [() => setRutas([])])];
+    }, errorHandler)] : [() => setJornadas([])])];
     return () => unsubs.forEach(u => u());
   }, [currentUser]);
 
@@ -308,7 +247,7 @@ function useSesion() {
     currentUser, authChecked, firestoreError,
     locked, setLocked,
     isOnline,
-    productos, clientes, localidades, notas, creditos, rutas, jornadas, medicion, tarifas, vehiculos, medidores, pedidos,
-    pendCounts, totalPendientes, notificacionesTransferencias,
+    productos, clientes, localidades, notas, creditos, jornadas, medicion, tarifas, vehiculos, medidores,
+    pendCounts, totalPendientes,
   };
 }

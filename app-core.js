@@ -318,15 +318,6 @@ function Modal({
     }
   }, React.createElement(XI, null))), children));
 }
-function distanciaMetros(lat1, lng1, lat2, lng2) {
-  const R = 6371000,
-    toRad = d => d * Math.PI / 180;
-  const dLat = toRad(lat2 - lat1),
-    dLng = toRad(lng2 - lng1);
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-const RADIO_VISITA_METROS = 150;
 const Toggle = ({
   checked,
   onChange,
@@ -397,76 +388,4 @@ function PwInp({
       display: 'flex'
     }
   }, show ? React.createElement(EyeX, null) : React.createElement(EyeI, null)));
-}
-function BarcodeScanner({
-  onDetected,
-  onClose
-}) {
-  const [elId] = useState(() => 'scanner-' + uid());
-  const [err, setErr] = useState('');
-  useEffect(() => {
-    if (typeof Html5Qrcode === 'undefined') {
-      setErr('No se pudo cargar la librería de escaneo. Revisa tu conexión a internet.');
-      return;
-    }
-    let scanner = null,
-      stopped = false,
-      cancelled = false;
-    (async () => {
-      try {
-        scanner = new Html5Qrcode(elId);
-        await scanner.start({
-          facingMode: 'environment'
-        }, {
-          fps: 10,
-          qrbox: {
-            width: 260,
-            height: 130
-          }
-        }, decodedText => {
-          if (stopped || cancelled) return;
-          stopped = true;
-          scanner.stop().then(() => scanner.clear()).catch(() => {});
-          onDetected(decodedText);
-        }, () => {});
-      } catch (e) {
-        if (!cancelled) setErr('No se pudo acceder a la cámara. Revisa los permisos del navegador.');
-      }
-    })();
-    return () => {
-      cancelled = true;
-      if (scanner && !stopped) {
-        stopped = true;
-        try {
-          scanner.stop().then(() => scanner.clear()).catch(() => {});
-        } catch (e) {}
-      }
-    };
-  }, []);
-  return React.createElement(Modal, {
-    title: "📷 Escanear código de barras",
-    onClose: onClose
-  }, err ? React.createElement("div", {
-    style: {
-      fontSize: 13,
-      color: 'var(--danger-text)',
-      textAlign: 'center',
-      padding: '24px 0'
-    }
-  }, err) : React.createElement("div", {
-    id: elId,
-    style: {
-      width: '100%',
-      borderRadius: 4,
-      overflow: 'hidden',
-      background: '#000'
-    }
-  }), React.createElement("div", {
-    style: {
-      fontSize: 11,
-      color: 'var(--ink-faint)',
-      textAlign: 'center',
-      marginTop: 10
-    }
-  }, "Apunta la cámara al código de barras del producto"));
 }

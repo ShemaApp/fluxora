@@ -97,11 +97,6 @@ function JerarquiaPanel({ clientes = [], localidades = [], vehiculos = [], medid
         localidadId: localidad.id,
         localidadNombre: localidad.nombre,
         localidad: localidad.nombre,
-        zonaId: firebase.firestore.FieldValue.delete(),
-        zonaNombre: firebase.firestore.FieldValue.delete(),
-        zonaChoferId: firebase.firestore.FieldValue.delete(),
-        zonaChoferNombre: firebase.firestore.FieldValue.delete(),
-        zonaVehiculo: firebase.firestore.FieldValue.delete()
       });
       mostrar('Cliente ligado a ' + localidad.nombre);
     } catch (e) {

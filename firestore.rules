@@ -77,19 +77,12 @@ service cloud.firestore {
       allow create, update, delete: if esAdmin();
     }
 
-    // notas, pedidos: operación diaria — cualquier autenticado puede leer
-    // y crear; editar/borrar solo admin (evita que se alteren ventas ya
-    // cerradas).
+    // notas: ventas de agua medida — se conservan como registro inmutable.
     match /notas/{id} {
       allow read: if autenticado() && (esAdmin() || resource.data.capturadoPorUid == request.auth.uid || resource.data.repartidorId == request.auth.uid);
       allow create: if snapshotTarifaValido() && (esAdmin() || (autenticado() && request.resource.data.capturadoPorUid == request.auth.uid && request.resource.data.jornadaId is string && request.resource.data.jornadaId != '' && get(/databases/$(database)/documents/jornadas/$(request.resource.data.jornadaId)).data.repartidorId == request.auth.uid && clienteDelRepartidor(request.resource.data.clienteId)));
       allow update, delete: if false;
     }
-    match /pedidos/{id} {
-      allow read, create, update: if autenticado();
-      allow delete: if esAdmin();
-    }
-
     // creditos: cualquier autenticado puede leer/crear/editar (abonos);
     // borrar solo admin.
     match /creditos/{id} {
@@ -105,8 +98,6 @@ service cloud.firestore {
       allow create, update, delete: if esAdmin();
     }
 
-    // rutas: transferencias/reparto — cualquier autenticado puede
-    // leer/crear/editar; borrar solo admin.
     match /lecturas_medidor/{id} {
       allow read: if autenticado() && (esAdmin() || resource.data.usuarioUid == request.auth.uid || get(/databases/$(database)/documents/jornadas/$(resource.data.jornadaId)).data.repartidorId == request.auth.uid);
       allow create: if autenticado() && (esAdmin() || (request.resource.data.usuarioUid == request.auth.uid && get(/databases/$(database)/documents/jornadas/$(request.resource.data.jornadaId)).data.repartidorId == request.auth.uid));
@@ -118,13 +109,6 @@ service cloud.firestore {
       allow update: if autenticado() && (esAdmin() || (resource.data.repartidorId == request.auth.uid && localidadDelRepartidor(resource.data.localidadId) && request.resource.data.repartidorId == request.auth.uid && request.resource.data.lecturaAnterior == resource.data.lecturaAnterior && request.resource.data.lecturaInicial == resource.data.lecturaInicial && request.resource.data.vehiculo == resource.data.vehiculo && request.resource.data.vehiculoId == resource.data.vehiculoId && request.resource.data.medidorId == resource.data.medidorId && request.resource.data.localidadId == resource.data.localidadId && request.resource.data.unidadComercial == resource.data.unidadComercial && request.resource.data.litrosPorUnidad == resource.data.litrosPorUnidad && request.resource.data.incrementoContadorPorUnidad == resource.data.incrementoContadorPorUnidad && request.resource.data.aguaCargadaLitros == resource.data.aguaCargadaLitros && request.resource.data.aguaDisponibleLitros >= 0 && request.resource.data.lecturaCalculadaActual >= resource.data.lecturaCalculadaActual && request.resource.data.litrosVendidosAcumulados >= resource.data.litrosVendidosAcumulados && (!resource.data.keys().hasAll(['resumenTarifas']) || request.resource.data.resumenTarifas == resource.data.resumenTarifas)));
       allow delete: if esAdmin();
     }
-    match /rutas/{id} {
-      allow read: if autenticado() && (esAdmin() || resource.data.repartidorId == request.auth.uid || localidadDelRepartidor(resource.data.localidadId));
-      allow create: if esAdmin() || (autenticado() && request.resource.data.repartidorId == request.auth.uid && localidadDelRepartidor(request.resource.data.localidadId));
-      allow update: if esAdmin() || (autenticado() && resource.data.repartidorId == request.auth.uid && request.resource.data.repartidorId == request.auth.uid && request.resource.data.localidadId == resource.data.localidadId && localidadDelRepartidor(resource.data.localidadId));
-      allow delete: if esAdmin();
-    }
-
     // inventario_historial, devoluciones: bitácora — se puede leer y
     // crear, pero nunca editar ni borrar (registro de solo lectura una
     // vez escrito).
@@ -137,8 +121,8 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // cierres_caja, gastos, ubicacion_auditoria: gerencia/auditoría —
-    // cualquier autenticado puede leer/crear; editar/borrar solo admin.
+    // cierres_caja y gastos: gerencia — cualquier autenticado puede leer/crear;
+    // editar/borrar solo admin.
     match /cierres_caja/{id} {
       allow read, create: if autenticado();
       allow update, delete: if esAdmin();
@@ -147,11 +131,6 @@ service cloud.firestore {
       allow read, create: if autenticado();
       allow update, delete: if esAdmin();
     }
-    match /ubicacion_auditoria/{id} {
-      allow read, create: if autenticado();
-      allow update, delete: if esAdmin();
-    }
-
     // _meta: control interno. La configuración de medición es administrativa;
     // el repartidor solo puede leerla para operar y nunca modificarla.
     match /_meta/{id} {

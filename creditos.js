@@ -237,12 +237,12 @@ function Creditos({
         gap: 5
       }
     }, a.formaPago && React.createElement(Tag, {
-      color: a.formaPago === 'transferencia' ? 'var(--info-text)' : 'var(--ok-text)',
+      color: 'var(--ok-text)',
       style: {
         fontSize: 9,
         padding: '1px 5px'
       }
-    }, a.formaPago === 'transferencia' ? '🏦' : '💵'), React.createElement("span", {
+    }, '💵'), React.createElement("span", {
       style: {
         color: 'var(--ok-text)',
         fontWeight: 700
@@ -321,7 +321,7 @@ function Creditos({
       gap: 6,
       marginBottom: 6
     }
-  }, [['efectivo', '💵 Efectivo', 'var(--ok-bg)', 'var(--ok-text)'], ['transferencia', '🏦 Transferencia', 'var(--info-bg)', 'var(--info-text)']].map(([v, l, bg, col]) => React.createElement("button", {
+  }, [['efectivo', '💵 Efectivo', 'var(--ok-bg)', 'var(--ok-text)']].map(([v, l, bg, col]) => React.createElement("button", {
     key: v,
     onClick: () => setFormaPagoAbono(v),
     style: {

@@ -3,13 +3,12 @@ function App() {
     currentUser, authChecked, firestoreError,
     locked, setLocked,
     isOnline,
-    productos, clientes, localidades, notas, creditos, rutas, jornadas, medicion, tarifas, vehiculos, medidores, pedidos,
-    pendCounts, totalPendientes, notificacionesTransferencias,
+    productos, clientes, localidades, notas, creditos, jornadas, medicion, tarifas, vehiculos, medidores,
+    pendCounts, totalPendientes,
   } = useSesion();
   const [tab, setTab] = useState('home');
   const [navOpen, setNavOpen] = useState(false);
   const historialTabs = useRef([]);
-  const [modoNota, setModoNota] = useState('pedidos');
   const [abrirFormProducto, setAbrirFormProducto] = useState(false);
   const [abrirUsuarios, setAbrirUsuarios] = useState(false);
   const [abrirPrivacidad, setAbrirPrivacidad] = useState(false);
@@ -20,7 +19,7 @@ function App() {
   }, []);
   const esAdmin = currentUser?.role === 'admin';
   const esRepartidor = currentUser?.role === 'repartidor';
-  const ALL_TABS = [['home', '🏠', 'Inicio'], ['nota', '📋', 'Venta administrativa'], ['clientes', '👥', 'Clientes fijos'], ['creditos', '💳', 'Créditos / Abonos'], ['ruta', '🚚', esRepartidor ? 'Mi Ruta' : 'Cargas / Transferencias'], ['jornada', '⏱', esRepartidor ? 'Mi Jornada' : 'Conciliaciones'], ['repartidores', '🧭', 'Repartidores / Cargas'], ['productos', '📦', 'Productos / Tarifas'], ['inventario', '📋', 'Inventario de agua'], ['reportes', '📈', 'Reportes operativos'], ['gerencia', '💰', 'Caja'], ['jerarquia', '🏢', 'Asignaciones / Localidades'], ['privacidad', '🛡️', 'Privacidad']];
+  const ALL_TABS = [['home', '🏠', 'Inicio'], ['clientes', '👥', 'Clientes fijos'], ['creditos', '💳', 'Créditos / Abonos'], ['ruta', '🚚', esRepartidor ? 'Mi Ruta' : 'Cargas y Jornadas'], ['jornada', '⏱', esRepartidor ? 'Mi Jornada' : 'Conciliaciones'], ['repartidores', '🧭', 'Repartidores / Cargas'], ['productos', '📦', 'Productos / Tarifas'], ['inventario', '📋', 'Inventario de agua'], ['reportes', '📈', 'Reportes operativos'], ['gerencia', '💰', 'Caja'], ['jerarquia', '🏢', 'Asignaciones / Localidades'], ['privacidad', '🛡️', 'Privacidad']];
   const permTabs = permisoTabs(currentUser);
   const tabsPermitidos = esRepartidor ? ['home', 'ruta', 'jornada'] : ['home', 'privacidad', ...ALL_TABS.filter(([id]) => id !== 'home' && id !== 'privacidad' && permTabs[id]).map(([id]) => id)];
   const TABS = ALL_TABS.filter(([id]) => tabsPermitidos.includes(id));
@@ -40,7 +39,6 @@ function App() {
     if (!destino) return;
     if (destino === 'config' && !esAdmin) return;
     if (destino !== 'home' && destino !== 'config' && !tabsPermitidos.includes(destino)) return;
-    if (destino === 'nota' && !opciones.conservarModoNota) setModoNota('pedidos');
     if (destino === tab) return;
     historialTabs.current.push(tab);
     setTab(destino);
@@ -53,10 +51,9 @@ function App() {
     if (!esAdmin) return;
     navegarA('config');
   };
-  const goPrivacidad = () => navegarA('privacidad');
   const logout = () => {
     auth.signOut();
-    setTab('nota');
+    setTab('home');
   };
   const ctx = {
     productos,
@@ -64,14 +61,11 @@ function App() {
     localidades,
     notas,
     creditos,
-    rutas,
     jornadas,
     medicion,
     tarifas,
     vehiculos,
     medidores,
-    pedidos,
-    notificacionesTransferencias,
     offlineVentaResumen
   };
   if (!authChecked) return React.createElement("div", {
@@ -165,35 +159,7 @@ function App() {
     style: {
       gap: 6
     }
-  },     esAdmin && notificacionesTransferencias.length > 0 && React.createElement("button", {
-    onClick: () => navegarA('ruta'),
-    title: 'Ver transferencias pendientes',
-    'aria-label': 'Ver transferencias pendientes',
-    style: {
-      position: 'relative',
-      background: 'none',
-      border: 'none',
-      color: 'var(--warn)',
-      cursor: 'pointer',
-      padding: '4px 6px',
-      fontSize: 17
-    }
-  }, '🔔', React.createElement("span", {
-    style: {
-      position: 'absolute',
-      top: -2,
-      right: -2,
-      minWidth: 15,
-      height: 15,
-      borderRadius: 10,
-      background: 'var(--danger)',
-      color: '#fff',
-      fontSize: 9,
-      lineHeight: '15px',
-      fontWeight: 800,
-      textAlign: 'center'
-    }
-  }, notificacionesTransferencias.length)), React.createElement("span", {
+  }, React.createElement("span", {
     style: {
       fontSize: 12,
       color: 'var(--rail-ink-faint)'
@@ -274,12 +240,7 @@ function App() {
   }, firestoreError), tab === 'home' && React.createElement(Dashboard, {
     ...ctx,
     currentUser: currentUser,
-    notificacionesTransferencias: notificacionesTransferencias,
     onIrA: navegarA,
-    onVentaRapida: () => {
-      setModoNota('almacen');
-      navegarA('nota', { conservarModoNota: true });
-    },
     onAgregarProducto: () => {
       setAbrirFormProducto(true);
       navegarA('productos');
@@ -292,11 +253,7 @@ function App() {
     ...ctx,
     currentUser: currentUser,
     abrirForm: abrirFormProducto,
-    onAbrirFormConsumido: () => setAbrirFormProducto(false)
-  }), tab === 'nota' && React.createElement(CrearNota, {
-    ...ctx,
-    currentUser: currentUser,
-    ventaRapida: modoNota === 'almacen'
+        onAbrirFormConsumido: () => setAbrirFormProducto(false)
   }), tab === 'clientes' && React.createElement(Clientes, {
     ...ctx,
     currentUser: currentUser

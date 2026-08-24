@@ -1,96 +1,31 @@
-function StatTile({
-  value,
-  label,
-  bg,
-  color,
-  onClick
-}) {
-  return React.createElement("div", {
-    className: 'fx-stat-tile',
-    onClick: onClick,
-    style: {
-      background: bg,
-      color,
-      borderRadius: 6,
-      padding: '16px 14px',
-      cursor: onClick ? 'pointer' : 'default',
-      display: 'flex',
-      flexDirection: 'column',
-      minHeight: 118,
-      justifyContent: 'space-between'
-    }
-  }, React.createElement("div", null, React.createElement("div", {
-    style: {
-      fontSize: 28,
-      fontWeight: 800,
-      fontFamily: 'var(--font-display)',
-      lineHeight: 1
-    }
-  }, value), React.createElement("div", {
-    style: {
-      fontSize: 12,
-      fontWeight: 600,
-      marginTop: 6
-    }
-  }, label)), onClick && React.createElement(Row, {
-    style: {
-      gap: 4,
-      fontSize: 11,
-      fontWeight: 700,
-      opacity: .85,
-      marginTop: 8
-    }
-  }, React.createElement("span", null, "Ver más"), React.createElement("span", null, "→")));
+function StatTile({ value, label, bg, color, onClick }) {
+  const props = { style: { background: bg || 'var(--surface)', color: color || 'var(--ink)', borderRadius: 8, padding: '12px 10px', minHeight: 74, border: 'none', textAlign: 'left', width: '100%', boxSizing: 'border-box' } };
+  if (onClick) {
+    props.onClick = onClick;
+    props.style.cursor = 'pointer';
+  }
+  return React.createElement(onClick ? 'button' : 'div', props, React.createElement('div', { style: { fontSize: 21, fontWeight: 800, lineHeight: 1.05 } }, value), React.createElement('div', { style: { fontSize: 10, fontWeight: 700, marginTop: 6, opacity: .88 } }, label));
 }
-function Dashboard({
-  notas,
-  productos,
-  creditos,
-  clientes,
-  rutas,
-  jornadas = [],
-  currentUser,
-  notificacionesTransferencias = [],
-  offlineVentaResumen = { registros: [] },
-  onIrA,
-  onVentaRapida
-}) {
+
+function Dashboard({ notas = [], productos = [], creditos = [], clientes = [], jornadas = [], currentUser = {}, offlineVentaResumen = { registros: [] }, onIrA }) {
   const isAdmin = currentUser.role === 'admin';
   const isRepartidor = currentUser.role === 'repartidor';
-  const tabsPermitidos = permisoTabs(currentUser);
-  const esEfectivo = fp => fp === 'efectivo' || fp === 'contado';
   const hoy = new Date().toDateString();
-  const vhoy = notas.filter(n => new Date(n.fecha).toDateString() === hoy);
-  const thoy = vhoy.reduce((s, n) => s + n.total, 0);
-  const pend = creditos.filter(c => c.saldo > 0);
-  const tcred = pend.reduce((s, c) => s + c.saldo, 0);
-  const bajo = productos.filter(p => p.stock < 10);
-  const avisosTransferencia = notificacionesTransferencias.slice(0, 4);
-  const bmap = notas.reduce((m, n) => {
-    m[n.clienteId] = m[n.clienteId] || {
-      nombre: n.clienteNombre,
-      total: 0,
-      count: 0
-    };
-    m[n.clienteId].total += n.total;
-    m[n.clienteId].count += 1;
-    return m;
-  }, {});
-  const top = Object.values(bmap).sort((a, b) => b.total - a.total).slice(0, 5);
-  const maxT = top[0]?.total || 1;
-  const misNotasHoy = vhoy.filter(n => n.capturadoPorUid === currentUser.uid);
-  const miVentaEfectivoHoy = misNotasHoy.filter(n => esEfectivo(n.formaPago)).reduce((s, n) => s + n.total, 0);
-  const misClientesHoy = new Set(misNotasHoy.map(n => n.clienteId)).size;
-  const rutaActiva = (rutas || []).find(r => r.estado === 'activa' && (!isRepartidor || r.repartidorId === currentUser.uid));
+  const ventasHoy = (notas || []).filter(n => new Date(n.fecha).toDateString() === hoy);
+  const clientesActivos = (clientes || []).filter(c => c.activo !== false).length;
+  const ingresosHoy = ventasHoy.reduce((suma, venta) => suma + Number(venta.total || 0), 0);
+  const creditosPendientes = (creditos || []).filter(c => Number(c.saldo || 0) > 0).reduce((suma, credito) => suma + Number(credito.saldo || 0), 0);
+  const jornadaActiva = (jornadas || []).find(j => j.estado === 'abierta' && j.repartidorId === currentUser.uid);
+  const irA = id => () => onIrA && onIrA(id);
+
   if (isRepartidor) {
-    const jornadaActiva = (jornadas || []).find(j => j.estado === 'abierta' && j.repartidorId === currentUser.uid);
     const notasJornada = jornadaActiva ? (notas || []).filter(n => n.jornadaId === jornadaActiva.id && n.capturadoPorUid === currentUser.uid) : [];
     const estadosPendientes = ['pendiente', 'reintentando', 'requiere_revision', 'incidencia_inventario'];
     const ventasOfflineJornada = jornadaActiva ? (offlineVentaResumen.registros || []).filter(v => v.jornadaId === jornadaActiva.id && estadosPendientes.includes(v.estado)) : [];
     const ventasJornada = notasJornada.concat(ventasOfflineJornada);
-    const litrosDeNotas = ventasJornada.reduce((suma, venta) => suma + Number(venta.litrosVendidos || (venta.items || []).reduce((subtotal, item) => subtotal + Number(item.litrosVendidos || item.litros || 0), 0)), 0);
+    const litrosDeVentas = ventasJornada.reduce((suma, venta) => suma + Number(venta.litrosVendidos || (venta.items || []).reduce((subtotal, item) => subtotal + Number(item.litrosVendidos || item.litros || 0), 0)), 0);
     const litrosVendidosRemotos = Number(jornadaActiva?.litrosVendidosAcumulados ?? jornadaActiva?.litrosVendidos ?? 0);
-    const litrosVendidos = jornadaActiva ? Math.max(litrosVendidosRemotos, litrosDeNotas) : 0;
+    const litrosVendidos = jornadaActiva ? Math.max(litrosVendidosRemotos, litrosDeVentas) : 0;
     const garrafonesVendidos = ventasJornada.reduce((suma, venta) => suma + Number(venta.garrafones || (venta.items || []).reduce((subtotal, item) => subtotal + Number(item.cant || 0), 0)), 0);
     const litrosCargados = Number(jornadaActiva?.aguaCargadaLitros || 0);
     const litrosPendientesLocales = ventasOfflineJornada.reduce((suma, venta) => suma + Number(venta.litrosVendidos || 0), 0);
@@ -98,352 +33,43 @@ function Dashboard({
     const incrementoPendiente = ventasOfflineJornada.reduce((suma, venta) => suma + Number(venta.incrementoContador || 0), 0);
     const medidorRemoto = Number(jornadaActiva?.lecturaCalculadaActual ?? jornadaActiva?.lecturaActual ?? jornadaActiva?.lecturaInicial ?? 0);
     const medidorLogico = jornadaActiva ? medidorRemoto + incrementoPendiente : null;
-    const irAOperacion = id => () => onIrA(id);
-    return React.createElement("div", {
-      className: 'fx-page-home fx-page-home-repartidor',
-      style: { padding: '16px 12px' }
-    }, React.createElement("div", {
-      style: { fontSize: 20, fontWeight: 800, marginBottom: 4 }
-    }, "Operación de jornada"), React.createElement("div", {
-      style: { fontSize: 12, color: 'var(--ink-soft)', lineHeight: 1.45, marginBottom: 14 }
-    }, "Lectura física solo al abrir y cerrar. Durante las ventas, el sistema mantiene el medidor lógico acumulado y calcula los litros según la configuración vigente de la jornada."), !jornadaActiva && React.createElement(Card, {
-      style: { marginBottom: 14, background: 'var(--info-bg)', color: 'var(--info-text)' }
-    }, React.createElement("div", { style: { fontSize: 12, fontWeight: 800, marginBottom: 5 } }, "JORNADA NO INICIADA"), React.createElement("div", { style: { fontSize: 12, lineHeight: 1.4 } }, "Selecciona el vehículo asignado, registra la carga en litros y captura la lectura física inicial para comenzar.")), jornadaActiva && React.createElement(Card, {
-      style: { marginBottom: 14 }
-    }, React.createElement(Row, { style: { justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, marginBottom: 9 } }, React.createElement("div", null, React.createElement("div", { style: { fontSize: 10, color: 'var(--ink-faint)', fontWeight: 800, letterSpacing: '.08em' } }, "JORNADA ABIERTA"), React.createElement("div", { style: { fontSize: 17, fontWeight: 800, marginTop: 3 } }, jornadaActiva.localidadNombre || jornadaActiva.localidad || 'Localidad asignada')), React.createElement(Tag, { color: 'var(--ok-text)' }, 'Activa')), React.createElement("div", { style: { fontSize: 11, color: 'var(--ink-soft)', marginBottom: 10 } }, 'Vehículo: ', jornadaActiva.vehiculoNombre || jornadaActiva.vehiculo || jornadaActiva.vehiculoId || '—', ' · Medidor: ', jornadaActiva.medidorNombre || jornadaActiva.medidorId || '—'), React.createElement("div", { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 } }, React.createElement(StatTile, { value: litrosCargados.toFixed(2) + ' L', label: 'Litros cargados', bg: 'var(--rail)', color: 'var(--rail-ink)' }), React.createElement(StatTile, { value: litrosVendidos.toFixed(2) + ' L', label: 'Litros vendidos', bg: 'var(--accent)', color: 'var(--accent-ink)' }), React.createElement(StatTile, { value: litrosDisponibles.toFixed(2) + ' L', label: 'Litros disponibles', bg: litrosDisponibles <= litrosCargados * .15 ? 'var(--danger)' : 'var(--ok)', color: '#fff' }), React.createElement(StatTile, { value: garrafonesVendidos.toFixed(2), label: 'Garrafones vendidos', bg: 'var(--info)', color: '#fff' }), React.createElement(StatTile, { value: medidorLogico === null ? '—' : medidorLogico.toFixed(2), label: 'Medidor lógico acumulado', bg: 'var(--surface-2)', color: 'var(--ink)' }))), !jornadaActiva && React.createElement("div", { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 } }, React.createElement("button", { onClick: irAOperacion('jornada'), style: { minHeight: 58, border: 0, borderRadius: 10, background: 'var(--accent)', color: 'var(--ink)', fontWeight: 900 } }, 'Iniciar jornada'), React.createElement("button", { onClick: irAOperacion('jornada'), style: { minHeight: 58, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--ink-soft)', borderRadius: 10, fontWeight: 800 } }, 'Ver asignación')), jornadaActiva && React.createElement("div", { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 } }, React.createElement("button", { onClick: irAOperacion('ruta'), style: { minHeight: 58, border: 0, borderRadius: 10, background: 'var(--accent)', color: 'var(--ink)', fontWeight: 900 } }, 'Abrir Mi ruta'), React.createElement("button", { onClick: irAOperacion('jornada'), style: { minHeight: 58, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--ink)', borderRadius: 10, fontWeight: 800 } }, 'Cerrar jornada')), React.createElement("div", { style: { fontSize: 11, color: 'var(--ink-faint)', lineHeight: 1.45 } }, 'Flujo operativo: jornada → carga y lectura inicial → Mi ruta → garrafones → efectivo o crédito → siguiente cliente → lectura física final y conciliación.'));
+    return React.createElement('div', { className: 'fx-page-home fx-page-home-repartidor', style: { padding: '16px 12px' } },
+      React.createElement('div', { style: { fontSize: 20, fontWeight: 800, marginBottom: 4 } }, 'Operación de jornada'),
+      React.createElement('div', { style: { fontSize: 12, color: 'var(--ink-soft)', lineHeight: 1.45, marginBottom: 14 } }, 'Lectura física solo al abrir y cerrar. Durante las ventas, el sistema mantiene el medidor lógico acumulado y calcula los litros según la configuración de la jornada.'),
+      !jornadaActiva && React.createElement(Card, { style: { marginBottom: 14, background: 'var(--info-bg)', color: 'var(--info-text)' } }, React.createElement('div', { style: { fontSize: 12, fontWeight: 800, marginBottom: 5 } }, 'JORNADA NO INICIADA'), React.createElement('div', { style: { fontSize: 12, lineHeight: 1.4 } }, 'Selecciona la asignación vigente, registra la carga en litros y captura la lectura física inicial para comenzar.')),
+      jornadaActiva && React.createElement(Card, { style: { marginBottom: 14 } },
+        React.createElement('div', { style: { fontSize: 10, color: 'var(--ink-faint)', fontWeight: 800, letterSpacing: '.08em' } }, 'JORNADA ABIERTA'),
+        React.createElement('div', { style: { fontSize: 17, fontWeight: 800, marginTop: 3 } }, jornadaActiva.localidadNombre || jornadaActiva.localidad || 'Localidad asignada'),
+        React.createElement('div', { style: { fontSize: 11, color: 'var(--ink-soft)', margin: '7px 0 10px' } }, 'Vehículo: ', jornadaActiva.vehiculoNombre || jornadaActiva.vehiculo || jornadaActiva.vehiculoId || '—', ' · Medidor: ', jornadaActiva.medidorNombre || jornadaActiva.medidorId || '—'),
+        React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 } },
+          React.createElement(StatTile, { value: litrosCargados.toFixed(2) + ' L', label: 'Litros cargados', bg: 'var(--rail)', color: 'var(--rail-ink)' }),
+          React.createElement(StatTile, { value: litrosVendidos.toFixed(2) + ' L', label: 'Litros vendidos', bg: 'var(--accent)', color: 'var(--accent-ink)' }),
+          React.createElement(StatTile, { value: litrosDisponibles.toFixed(2) + ' L', label: 'Litros disponibles', bg: litrosDisponibles <= litrosCargados * .15 ? 'var(--danger)' : 'var(--ok)', color: '#fff' }),
+          React.createElement(StatTile, { value: garrafonesVendidos.toFixed(2), label: 'Garrafones vendidos', bg: 'var(--info)', color: '#fff' }),
+          React.createElement(StatTile, { value: medidorLogico === null ? '—' : medidorLogico.toFixed(2), label: 'Medidor lógico acumulado', bg: 'var(--surface-2)', color: 'var(--ink)' }))),
+      React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 } },
+        React.createElement('button', { onClick: irA(jornadaActiva ? 'ruta' : 'jornada'), style: { minHeight: 58, border: 0, borderRadius: 10, background: 'var(--accent)', color: 'var(--ink)', fontWeight: 900 } }, jornadaActiva ? 'Abrir Mi ruta' : 'Iniciar jornada'),
+        React.createElement('button', { onClick: irA('jornada'), style: { minHeight: 58, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--ink)', borderRadius: 10, fontWeight: 800 } }, jornadaActiva ? 'Cerrar jornada' : 'Ver asignación')),
+      React.createElement('div', { style: { fontSize: 11, color: 'var(--ink-faint)', lineHeight: 1.45 } }, 'Flujo operativo: jornada → carga y lectura inicial → Mi ruta → garrafones → efectivo o crédito → siguiente cliente → lectura física final y conciliación.'));
   }
-  const irA = id => () => {
-    if (tabsPermitidos[id]) onIrA(id);
-  };
-  const acciones = (isRepartidor ? [{
-    icon: '🧾',
-    label: 'Venta rápida',
-    detalle: rutaActiva ? 'Vender desde mi transferencia' : 'Revisar transferencia',
-    onClick: irA('ruta')
-  }, {
-    icon: '🧭',
-    label: 'Mi distribución',
-    detalle: 'Revisar transferencias y clientes QR',
-    onClick: irA('repartidores')
-  }, {
-    icon: '💰',
-    label: 'Corte del día',
-    detalle: 'Consultar ventas y efectivo',
-    onClick: irA('gerencia')
-  }] : [{
-    icon: '🧾',
-    label: 'Nuevo pedido',
-    detalle: 'Solicitud sin descontar inventario',
-    onClick: irA('nota'),
-    tab: 'nota'
-  }, {
-    icon: '⚡',
-    label: 'Venta rápida',
-    detalle: 'Venta directa desde almacén, sin transferencia',
-    onClick: onVentaRapida,
-    tab: 'nota',
-    soloAdmin: true
-  }, {
-    icon: '👥',
-    label: 'Clientes y QR',
-    detalle: 'Buscar, crear o mostrar QR',
-    onClick: irA('clientes'),
-    tab: 'clientes'
-  }, {
-    icon: '💳',
-    label: 'Cobrar crédito',
-    detalle: 'Consultar saldo y registrar abono',
-    onClick: irA('creditos'),
-    tab: 'creditos'
-  }, {
-    icon: '📦',
-    label: 'Transferencias',
-    detalle: 'Cargar, conciliar o recibir',
-    onClick: irA('ruta'),
-    tab: 'ruta',
-    soloAdmin: true
-  }, {
-    icon: '📋',
-    label: 'Revisar inventario',
-    detalle: 'Consultar existencias y alertas',
-    onClick: irA('inventario'),
-    tab: 'inventario'
-  }]).filter(a => (a.soloAdmin ? isAdmin : true) && (!a.tab || tabsPermitidos[a.tab]));
-  const tituloAcciones = isRepartidor ? 'Herramientas de campo' : 'Acciones rápidas';
-  const ayudaAcciones = isRepartidor ? 'Accesos para vender desde tu transferencia, identificar clientes y consultar tu corte.' : 'Accesos directos para las tareas operativas más frecuentes.';
-  return React.createElement("div", {
-    className: 'fx-page-home',
-    style: {
-      padding: '16px 12px'
-    }
-  }, React.createElement("div", {
-    style: {
-      fontSize: 20,
-      fontWeight: 800,
-      marginBottom: 14
-    }
-  }, "📊 Inicio"), avisosTransferencia.length > 0 && React.createElement(Card, {
-    style: {
-      marginBottom: 14,
-      border: '1px solid var(--warn)66'
-    }
-  }, React.createElement(Row, {
-    style: {
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 8
-    }
-  }, React.createElement("div", {
-    style: {
-      fontSize: 13,
-      fontWeight: 800,
-      color: 'var(--warn-text)'
-    }
-  }, '🔔 Transferencias pendientes'), React.createElement("button", {
-    onClick: () => onIrA('ruta'),
-    style: {
-      border: 'none',
-      background: 'none',
-      color: 'var(--accent)',
-      fontSize: 11,
-      fontWeight: 700,
-      cursor: 'pointer'
-    }
-  }, 'Ver módulo →')), avisosTransferencia.map(aviso => React.createElement("button", {
-    key: aviso.id,
-    onClick: () => onIrA('ruta'),
-    style: {
-      display: 'block',
-      width: '100%',
-      textAlign: 'left',
-      border: 'none',
-      borderTop: '1px solid var(--line)',
-      background: 'transparent',
-      padding: '8px 0 0',
-      marginTop: 8,
-      cursor: 'pointer'
-    }
-  }, React.createElement("div", {
-    style: {
-      fontSize: 12,
-      fontWeight: 700,
-      color: 'var(--ink)'
-    }
-  }, aviso.titulo), React.createElement("div", {
-    style: {
-      fontSize: 11,
-      color: 'var(--ink-faint)',
-      marginTop: 2
-    }
-  }, aviso.detalle)))), React.createElement("div", {
-    style: {
-      display: 'grid',
-      gridTemplateColumns: '1fr 1fr',
-      gap: 10,
-      marginBottom: 14
-    }
-  }, isRepartidor ? React.createElement(React.Fragment, null, React.createElement(StatTile, {
-    value: misNotasHoy.length,
-    label: "Ventas de transferencia hoy",
-    bg: "var(--rail)",
-    color: "var(--rail-ink)",
-    onClick: irA('ruta')
-  }), React.createElement(StatTile, {
-    value: fmt(miVentaEfectivoHoy),
-    label: "Venta efectivo hoy",
-    bg: "var(--accent)",
-    color: "var(--accent-ink)",
-    onClick: irA('gerencia')
-  }), React.createElement(StatTile, {
-    value: misClientesHoy,
-    label: "Clientes atendidos hoy",
-    bg: "var(--info)",
-    color: "#fff",
-    onClick: irA('ruta')
-  }), React.createElement(StatTile, {
-    value: rutaActiva ? 'Activa' : 'Sin transferencia',
-    label: "Estado de tu transferencia",
-    bg: rutaActiva ? 'var(--ok)' : 'var(--warn)',
-    color: "#fff",
-    onClick: irA('ruta')
-  })) : React.createElement(React.Fragment, null, React.createElement(StatTile, {
-    value: vhoy.length,
-    label: "Ventas de hoy",
-    bg: "var(--rail)",
-    color: "var(--rail-ink)",
-    onClick: irA('nota')
-  }), React.createElement(StatTile, {
-    value: fmt(thoy),
-    label: "Ingresos de hoy",
-    bg: "var(--accent)",
-    color: "var(--accent-ink)",
-    onClick: irA('gerencia')
-  }), React.createElement(StatTile, {
-    value: clientes.filter(c => c.activo).length,
-    label: "Clientes registrados",
-    bg: "var(--info)",
-    color: "#fff",
-    onClick: irA('clientes')
-  }), React.createElement(StatTile, {
-    value: fmt(tcred),
-    label: "Créditos pendientes",
-    bg: "var(--warn)",
-    color: "#fff",
-    onClick: irA('creditos')
-  }))), acciones.length > 0 && React.createElement(Card, null, React.createElement("div", {
-    style: {
-      fontSize: 13,
-      fontWeight: 700,
-      marginBottom: 4,
-      fontFamily: 'var(--font-display)',
-      textTransform: 'uppercase',
-      letterSpacing: '.02em'
-    }
-  }, tituloAcciones), React.createElement("div", {
-    style: {
-      fontSize: 11,
-      color: 'var(--ink-faint)',
-      marginBottom: 12,
-      lineHeight: 1.35
-    }
-  }, ayudaAcciones), React.createElement("div", {
-    style: {
-      display: 'grid',
-      gridTemplateColumns: '1fr 1fr',
-      gap: 10
-    }
-  }, acciones.map(a => React.createElement("button", {
-    key: a.label,
-    onClick: a.onClick,
-    style: {
-      background: 'var(--surface-2)',
-      border: '1px solid var(--line)',
-      borderRadius: 6,
-      padding: '12px 9px',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      gap: 4,
-      cursor: 'pointer',
-      minHeight: 104
-    }
-  }, React.createElement("span", {
-    style: {
-      fontSize: 22
-    }
-  }, a.icon), React.createElement("span", {
-    style: {
-      fontSize: 12,
-      fontWeight: 700,
-      textAlign: 'center',
-      color: 'var(--ink)'
-    }
-  }, a.label), React.createElement("span", {
-    style: {
-      fontSize: 10,
-      lineHeight: 1.25,
-      textAlign: 'center',
-      color: 'var(--ink-faint)'
-    }
-  }, a.detalle))))), !isRepartidor && React.createElement(React.Fragment, null, top.length > 0 && React.createElement(Card, null, React.createElement("div", {
-    style: {
-      fontSize: 11,
-      color: 'var(--ink-faint)',
-      fontWeight: 700,
-      marginBottom: 10
-    }
-  }, "🏆 CLIENTES QUE MÁS COMPRAN"), top.map((b, i) => React.createElement("div", {
-    key: i,
-    style: {
-      marginBottom: 10
-    }
-  }, React.createElement(Row, {
-    style: {
-      justifyContent: 'space-between',
-      marginBottom: 3
-    }
-  }, React.createElement("span", {
-    style: {
-      fontSize: 13,
-      fontWeight: 600
-    }
-  }, b.nombre), React.createElement(Row, {
-    style: {
-      gap: 6
-    }
-  }, React.createElement(Tag, {
-    color: "var(--ink-faint)"
-  }, b.count, " ped."), React.createElement("span", {
-    style: {
-      fontSize: 13,
-      fontWeight: 700,
-      color: 'var(--accent-text)'
-    }
-  }, fmt(b.total)))), React.createElement("div", {
-    style: {
-      background: 'var(--surface-2)',
-      borderRadius: 10,
-      height: 5
-    }
-  }, React.createElement("div", {
-    style: {
-      background: 'linear-gradient(90deg,var(--accent),var(--warn))',
-      borderRadius: 10,
-      height: 5,
-      width: `${(b.total / maxT * 100).toFixed(0)}%`
-    }
-  }))))), bajo.length > 0 && React.createElement(Card, {
-    style: {
-      borderLeft: '3px solid var(--danger-text)'
-    }
-  }, React.createElement("div", {
-    style: {
-      fontSize: 12,
-      color: 'var(--danger-text)',
-      fontWeight: 700,
-      marginBottom: 6
-    }
-  }, "⚠️ Stock bajo"), bajo.map(p => React.createElement(Row, {
-    key: p.id,
-    style: {
-      justifyContent: 'space-between',
-      marginBottom: 4
-    }
-  }, React.createElement("span", {
-    style: {
-      fontSize: 13
-    }
-  }, p.nombre), React.createElement(Tag, {
-    color: "var(--danger-text)"
-  }, p.stock, " ", p.unidad)))), vhoy.length > 0 && React.createElement(Card, null, React.createElement("div", {
-    style: {
-      fontSize: 11,
-      color: 'var(--ink-faint)',
-      fontWeight: 700,
-      marginBottom: 8
-    }
-  }, "VENTAS DE HOY"), vhoy.map(n => React.createElement(Row, {
-    key: n.id,
-    style: {
-      justifyContent: 'space-between',
-      paddingBottom: 8,
-      borderBottom: '1px solid var(--line)',
-      marginBottom: 4
-    }
-  }, React.createElement("div", null, React.createElement("div", {
-    style: {
-      fontSize: 13,
-      fontWeight: 600
-    }
-  }, n.clienteNombre), React.createElement("div", {
-    style: {
-      fontSize: 11,
-      color: 'var(--ink-faint)'
-    }
-  }, n.items.length, " prod. · ", n.formaPago)), React.createElement("span", {
-    style: {
-      fontWeight: 700,
-      color: 'var(--accent-text)'
-    }
-  }, fmt(n.total)))))));
+
+  const acciones = [
+    ['🏢', 'Asignaciones / Localidades', 'Relacionar localidad, repartidor, vehículo y medidor', 'jerarquia'],
+    ['🚚', 'Repartidores y operación', 'Consultar cargas y jornadas por localidad', 'repartidores'],
+    ['👥', 'Clientes fijos', 'Consultar clientes y su localidad asignada', 'clientes'],
+    ['📏', 'Medición y tarifas', 'Configurar litros, contador físico y precio', 'config'],
+    ['📦', 'Inventario operativo', 'Consultar existencias y movimientos reales', 'inventario'],
+    ['💳', 'Créditos y abonos', 'Consultar saldos y pagos registrados', 'creditos'],
+    ['💰', 'Caja', 'Revisar efectivo esperado y cierres', 'gerencia'],
+    ['📈', 'Reportes y conciliación', 'Exportar ventas, litros y diferencias', 'reportes']
+  ];
+  return React.createElement('div', { className: 'fx-page-home', style: { padding: '16px 12px' } },
+    React.createElement('div', { style: { fontSize: 20, fontWeight: 800, marginBottom: 4 } }, 'Inicio administrativo'),
+    React.createElement('div', { style: { fontSize: 12, color: 'var(--ink-soft)', lineHeight: 1.45, marginBottom: 14 } }, 'Supervisión de distribución, medición, ventas, caja, inventario y conciliación.'),
+    React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 } },
+      React.createElement(StatTile, { value: ventasHoy.length, label: 'Ventas de hoy', bg: 'var(--rail)', color: 'var(--rail-ink)', onClick: irA('reportes') }),
+      React.createElement(StatTile, { value: fmt(ingresosHoy), label: 'Ingresos de hoy', bg: 'var(--accent)', color: 'var(--accent-ink)', onClick: irA('gerencia') }),
+      React.createElement(StatTile, { value: clientesActivos, label: 'Clientes fijos activos', bg: 'var(--info)', color: '#fff', onClick: irA('clientes') }),
+      React.createElement(StatTile, { value: fmt(creditosPendientes), label: 'Crédito pendiente', bg: 'var(--warn)', color: '#fff', onClick: irA('creditos') })),
+    React.createElement(Card, null, React.createElement('div', { style: { fontSize: 13, fontWeight: 800, marginBottom: 4, fontFamily: 'var(--font-display)', textTransform: 'uppercase' } }, 'Acciones del núcleo operativo'), React.createElement('div', { style: { fontSize: 11, color: 'var(--ink-faint)', marginBottom: 12 } }, 'Cada acceso corresponde a una relación real del sistema de agua medida.'), React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 } }, acciones.filter(a => a[3] !== 'config' || isAdmin).map(([icono, titulo, detalle, tab]) => React.createElement('button', { key: tab, onClick: irA(tab), style: { background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 6, padding: '12px 9px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'pointer', minHeight: 104 } }, React.createElement('span', { style: { fontSize: 22 } }, icono), React.createElement('span', { style: { fontSize: 12, fontWeight: 700, textAlign: 'center', color: 'var(--ink)' } }, titulo), React.createElement('span', { style: { fontSize: 10, lineHeight: 1.25, textAlign: 'center', color: 'var(--ink-faint)' } }, detalle))))));
 }

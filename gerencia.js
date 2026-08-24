@@ -92,22 +92,22 @@ function Gerencia({ currentUser, notas, creditos }) {
     const gastoEfectivoHoy = misGastosHoy.filter(g => g.formaPago === 'efectivo').reduce((s, g) => s + g.monto, 0);
     const gastosTarjetaHoy = misGastosHoy.filter(g => g.formaPago === 'tarjeta');
     // Caja real: ventas efectivo + pagos de crédito - salidas autorizadas en efectivo.
-    // efectivo. Los créditos otorgados y las ventas por transferencia ya
-    // quedan fuera de "ventaEfectivoHoy" por construcción (solo se suman las
-    // notas con formaPago==='efectivo'), así que restarlos aparte sería
-    // restarlos dos veces — por eso no aparecen como resta explícita aquí.
+    // Los créditos no forman parte del efectivo recibido; solo se suman
+    // ventas y abonos con forma de pago efectivo.
     const formulaBaseHoy = ventaEfectivoHoy + abonoEfectivoHoy;
-    // Ajuste adicional (no pedido por modelo.md, pero es lo que de verdad
-    // debe traer de vuelta la persona): descontar lo que ya gastó en efectivo.
+    // Se descuentan las salidas autorizadas registradas en efectivo.
     const efectivoEsperadoHoy = formulaBaseHoy - gastoEfectivoHoy;
-    const incidenciasInventarioHoy = misNotasHoy.filter(n => n.requiereRevision === true || n.estado === 'incidencia_inventario').flatMap(n => {
-        const items = n.incidenciaInventario?.itemsFaltantes || [];
+    const incidenciasOperacionHoy = misNotasHoy.filter(n => n.requiereRevision === true || n.estado === 'incidencia_agua' || n.estado === 'incidencia_inventario').flatMap(n => {
+        const detalle = n.incidenciaAgua || n.incidenciaInventario || {};
+        const items = detalle.itemsFaltantes || [];
         return [{
             notaId: n.id,
             ventaOfflineId: n.ventaOfflineId || '',
             fecha: n.fecha,
             clienteNombre: n.clienteNombre || '',
-            transferenciaId: n.transferenciaId || '',
+            localidadId: n.localidadId || '',
+            litrosVendidos: Number(n.litrosVendidos || 0),
+            mensaje: detalle.mensaje || detalle.tipo || '',
             items: items.length ? items : (n.items || []).map(item => ({ ...item, cantSolicitada: item.cant, cantAplicada: 0, cantFaltante: item.cant }))
         }];
     });
@@ -124,10 +124,10 @@ function Gerencia({ currentUser, notas, creditos }) {
                 gastoEfectivo: gastoEfectivoHoy,
                 formulaBase: formulaBaseHoy,
                 efectivoAEntregar: efectivoEsperadoHoy,
-                numPedidos: misNotasHoy.length,
+                numVentas: misNotasHoy.length,
                 numClientesAtendidos: new Set(misNotasHoy.map(n => n.clienteId)).size,
-                numIncidenciasInventario: incidenciasInventarioHoy.length,
-                incidenciasInventario: incidenciasInventarioHoy,
+                numIncidenciasOperacion: incidenciasOperacionHoy.length,
+                incidenciasOperacion: incidenciasOperacionHoy,
                 gastosTarjetaPendientes: gastosTarjetaHoy.map(g => ({ pagadoA: g.pagadoA, monto: g.monto })),
             });
             flash('✅ Caja cerrada — comprobante guardado');
@@ -248,11 +248,11 @@ function Gerencia({ currentUser, notas, creditos }) {
                 React.createElement("div", { style: { fontSize: 11, color: 'var(--ink-faint)' } },
                     isAdmin ? fDate(c.fecha) : '',
                     " ",
-                    c.numPedidos,
-                    " pedido(s) · ",
+                    c.numVentas ?? c.numPedidos ?? 0,
+                    " venta(s) · ",
                     c.numClientesAtendidos,
                     " cliente(s)",
-                    c.numIncidenciasInventario ? ' · ' + c.numIncidenciasInventario + ' incidencia(s)' : '')))),
+                    c.numIncidenciasOperacion ? ' · ' + c.numIncidenciasOperacion + ' incidencia(s)' : '')))),
         React.createElement(Card, null,
             React.createElement("div", { style: { fontSize: 11, color: 'var(--ink-faint)', fontWeight: 700, marginBottom: 10 } }, isAdmin ? 'TODOS LOS GASTOS' : 'TUS GASTOS REGISTRADOS'),
             gastos === null && React.createElement("div", { style: { fontSize: 13, color: 'var(--ink-faint)', textAlign: 'center', padding: '16px 0' } }, "Cargando\u2026"),
@@ -297,16 +297,16 @@ function Gerencia({ currentUser, notas, creditos }) {
                 React.createElement(Row, { style: { justifyContent: 'space-between', paddingTop: 8, marginTop: 4, borderTop: '1px solid var(--line-strong)' } },
                     React.createElement("span", { style: { fontWeight: 700 } }, "Efectivo a entregar"),
                     React.createElement("span", { style: { fontWeight: 800, fontSize: 18, color: 'var(--accent-text)' } }, fmt(efectivoEsperadoHoy)))),
-            incidenciasInventarioHoy.length > 0 && React.createElement(Card, { style: { background: 'var(--warn-bg)', marginTop: 10, marginBottom: 10 } },
-                React.createElement("div", { style: { fontWeight: 800, color: 'var(--warn-text)', marginBottom: 6 } }, "⚠️ Productos a revisar"),
-                incidenciasInventarioHoy.map((incidencia, index) => React.createElement("div", { key: incidencia.notaId || index, style: { fontSize: 11, color: 'var(--warn-text)', padding: '6px 0', borderBottom: index < incidenciasInventarioHoy.length - 1 ? '1px solid rgba(0,0,0,.12)' : 'none' } },
+            incidenciasOperacionHoy.length > 0 && React.createElement(Card, { style: { background: 'var(--warn-bg)', marginTop: 10, marginBottom: 10 } },
+                React.createElement("div", { style: { fontWeight: 800, color: 'var(--warn-text)', marginBottom: 6 } }, "⚠️ Incidencias de operación"),
+                incidenciasOperacionHoy.map((incidencia, index) => React.createElement("div", { key: incidencia.notaId || index, style: { fontSize: 11, color: 'var(--warn-text)', padding: '6px 0', borderBottom: index < incidenciasOperacionHoy.length - 1 ? '1px solid rgba(0,0,0,.12)' : 'none' } },
                     React.createElement("div", { style: { fontWeight: 700 } }, incidencia.clienteNombre, " · venta ", incidencia.notaId),
                     (incidencia.items || []).map(item => React.createElement("div", { key: item.id || item.nombre }, item.nombre, " — solicitado ", item.cantSolicitada || item.cant, ", aplicado ", item.cantAplicada || 0, ", faltante ", item.cantFaltante || 0))))),
             React.createElement("div", { style: { fontSize: 11, color: 'var(--ink-faint)', margin: '10px 0 16px' } },
                 misNotasHoy.length,
-                " pedido(s) · ",
+                " venta(s) · ",
                 new Set(misNotasHoy.map(n => n.clienteId)).size,
                 " cliente(s) atendido(s) hoy",
-                incidenciasInventarioHoy.length ? ' · ' + incidenciasInventarioHoy.length + ' incidencia(s) para revisión' : ''),
+                incidenciasOperacionHoy.length ? ' · ' + incidenciasOperacionHoy.length + ' incidencia(s) para revisión' : ''),
             React.createElement(BFill, { onClick: confirmarCierre, style: { width: '100%' }, disabled: cierreSaving }, cierreSaving ? 'Guardando…' : '✅ Confirmar cierre')));
 }

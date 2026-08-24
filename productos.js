@@ -96,7 +96,6 @@ function Productos({
   const longPressed = useRef(false);
   const [q, setQ] = useState('');
   const [form, setForm] = useState(null);
-  const [scanOpen, setScanOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [histOpen, setHistOpen] = useState(false);
   useEffect(() => {
@@ -455,13 +454,7 @@ function Productos({
     style: {
       flex: 1
     }
-  }), React.createElement(BOut, {
-    onClick: () => setScanOpen(true),
-    style: {
-      flexShrink: 0,
-      padding: '8px 12px'
-    }
-  }, "📷")), React.createElement(Lbl, null, "Motivo del cambio de inventario (opcional)"), React.createElement(Inp, {
+  })), React.createElement(Lbl, null, "Motivo del cambio de inventario (opcional)"), React.createElement(Inp, {
     value: form.motivo || '',
     onChange: e => setForm(f => ({
       ...f,
@@ -483,16 +476,7 @@ function Productos({
       width: '100%'
     },
     disabled: saving
-  }, saving ? 'Guardando…' : '💾 Guardar')), scanOpen && React.createElement(BarcodeScanner, {
-    onDetected: code => {
-      setForm(f => ({
-        ...f,
-        codigoBarras: code
-      }));
-      setScanOpen(false);
-    },
-    onClose: () => setScanOpen(false)
-  }), histOpen && React.createElement(InventarioHistorial, {
+  }, saving ? 'Guardando…' : '💾 Guardar')), histOpen && React.createElement(InventarioHistorial, {
     onClose: () => setHistOpen(false)
   }));
 }
