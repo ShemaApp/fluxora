@@ -833,3 +833,34 @@ body::before {
     width: 100%;
   }
 }
+
+/* Iteración relleno por medición */
+.fx-page-relleno,
+.fx-relleno-drafts {
+  width: 100%;
+  max-width: 760px;
+  box-sizing: border-box;
+}
+.fx-relleno-signature canvas {
+  max-width: 100%;
+}
+.fx-relleno-summary {
+  line-height: 1.45;
+}
+@media (max-width: 560px) {
+  .fx-page-relleno,
+  .fx-relleno-drafts {
+    padding: 11px !important;
+    border-radius: 10px !important;
+  }
+  .fx-relleno-signature canvas {
+    height: 145px !important;
+  }
+}
+@media (min-width: 900px) {
+  .fx-page-relleno,
+  .fx-relleno-drafts {
+    margin-left: auto;
+    margin-right: auto;
+  }
+}

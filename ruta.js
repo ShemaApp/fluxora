@@ -4,6 +4,8 @@ function FlujoChoferRapido({
   localidades = [],
   jornadas = [],
   notas = [],
+  servicios = [],
+  comprobantes = [],
   offlineVentaResumen = { registros: [] },
   medicion = null,
   tarifas = [],
@@ -118,12 +120,12 @@ function FlujoChoferRapido({
   });
   const seleccionarCliente = c => {
     setCliente(c);
-    setTarifaSeleccionadaId(c.tarifaHabitualId || '');
+    setTarifaSeleccionadaId(c.tarifaHabitualId || c.tarifaId || '');
     setMostrarTarifas(false);
-    setLecturaAntesVenta(String(lecturaActualRuta || jornadaActiva?.lecturaActual || jornadaActiva?.lecturaInicial || ''));
+    setLecturaAntesVenta(String(lecturaActualRuta || jornadaActiva?.lecturaCalculadaActual || jornadaActiva?.lecturaActual || jornadaActiva?.lecturaInicial || ''));
     setCantidad('');
     setFormaPago('');
-    setPaso(2);
+    setPaso(c.metodoServicio === 'relleno_por_medicion' ? 4 : 2);
   };
   const volverRuta = () => {
     setCliente(null);
@@ -202,7 +204,8 @@ function FlujoChoferRapido({
     setGuardando(false);
   };
   const runtime = typeof window !== 'undefined' ? window : globalThis;
-  const atendido = c => !!atendidos[claveAtendido(c)];
+  const serviciosJornada = (servicios || []).filter(servicio => servicio.jornadaId === jornadaActiva?.id && servicio.estado !== 'cancelado');
+  const atendido = c => !!atendidos[claveAtendido(c)] || serviciosJornada.some(servicio => servicio.clienteId === c.id && servicio.estado === 'completado') || (notas || []).some(nota => nota.jornadaId === jornadaActiva?.id && nota.clienteId === c.id && nota.estado !== 'cancelada');
   const aguaCargadaNumero = Number(jornadaActiva?.aguaCargadaLitros || 0);
   const capacidadTanqueRuta = Number(jornadaActiva?.capacidadTanqueLitros || 5000);
   const aguaDisponibleNumero = Math.max(0, Number(aguaDisponibleRuta === '' ? (jornadaActiva?.aguaDisponibleLitros ?? aguaCargadaNumero) : aguaDisponibleRuta) || 0);
@@ -210,14 +213,20 @@ function FlujoChoferRapido({
   const estadosVentaOffline = ['pendiente', 'reintentando', 'requiere_revision', 'incidencia_inventario'];
   const ventasOfflineJornada = (offlineVentaResumen.registros || []).filter(venta => venta.jornadaId === jornadaActiva?.id && estadosVentaOffline.includes(venta.estado));
   const ventasJornada = (notas || []).filter(venta => venta.jornadaId === jornadaActiva?.id).concat(ventasOfflineJornada);
-  const litrosVendidosRuta = jornadaActiva ? Math.max(Number(jornadaActiva.litrosVendidosAcumulados ?? jornadaActiva.litrosVendidos ?? 0), ventasJornada.reduce((suma, venta) => suma + Number(venta.litrosVendidos || (venta.items || []).reduce((subtotal, item) => subtotal + Number(item.litrosVendidos || item.litros || 0), 0)), 0)) : 0;
-  const garrafonesVendidosRuta = ventasJornada.reduce((suma, venta) => suma + Number(venta.garrafones || (venta.items || []).reduce((subtotal, item) => subtotal + Number(item.cant || 0), 0)), 0);
-  const medidorLogicoRuta = jornadaActiva ? Number(jornadaActiva.lecturaCalculadaActual ?? jornadaActiva.lecturaActual ?? jornadaActiva.lecturaInicial ?? 0) + ventasOfflineJornada.reduce((suma, venta) => suma + Number(venta.incrementoContador || 0), 0) : null;
+  const serviciosJornadaIndicadores = serviciosJornada.map(servicio => ({ litrosVendidos: Number(servicio.medicion?.litrosRellenados || 0), garrafones: Number(servicio.venta?.garrafonesCobrables || servicio.medicion?.garrafonesEquivalentes || 0) }));
+  const operacionesJornada = ventasJornada.concat(serviciosJornadaIndicadores);
+  const litrosVendidosRuta = jornadaActiva ? Math.max(Number(jornadaActiva.litrosVendidosAcumulados ?? jornadaActiva.litrosVendidos ?? 0), operacionesJornada.reduce((suma, venta) => suma + Number(venta.litrosVendidos || (venta.items || []).reduce((subtotal, item) => subtotal + Number(item.litrosVendidos || item.litros || 0), 0)), 0)) : 0;
+  const garrafonesVendidosRuta = operacionesJornada.reduce((suma, venta) => suma + Number(venta.garrafones || (venta.items || []).reduce((subtotal, item) => subtotal + Number(item.cant || 0), 0)), 0);
+  const medidorLogicoBase = jornadaActiva ? Number(jornadaActiva.lecturaCalculadaActual ?? jornadaActiva.lecturaActual ?? jornadaActiva.lecturaInicial ?? 0) : 0;
+  const medidorLogicoLocal = Number(lecturaActualRuta || 0);
+  const medidorLogicoOffline = ventasOfflineJornada.reduce((suma, venta) => suma + Number(venta.incrementoContador || 0), 0);
+  const medidorLogicoRuta = jornadaActiva ? Math.max(medidorLogicoBase + medidorLogicoOffline, Number.isFinite(medidorLogicoLocal) ? medidorLogicoLocal : 0) : null;
+  const pasosTotales = cliente?.metodoServicio === 'relleno_por_medicion' ? 4 : 3;
   const color = { ink: 'var(--ink)', soft: 'var(--ink-soft)', faint: 'var(--ink-faint)', line: 'var(--line)', surface: 'var(--surface)', accent: 'var(--accent)', ok: 'var(--ok-bg)', okText: 'var(--ok-text)' };
 
   return React.createElement('div', { className: 'fx-page-route', style: { padding: '14px 12px 28px' } },
     React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 } },
-      React.createElement('div', null, React.createElement('div', { style: { fontSize: 21, fontWeight: 800, letterSpacing: '-.02em' } }, 'Ruta del día'), React.createElement('div', { style: { fontSize: 12, color: color.soft, marginTop: 3 } }, localidad)), React.createElement('div', { style: { fontSize: 11, color: color.soft, textAlign: 'right' } }, 'PASO ', paso, ' DE 3', React.createElement('div', { style: { marginTop: 5, height: 4, width: 72, background: color.line, borderRadius: 5, overflow: 'hidden' } }, React.createElement('div', { style: { height: '100%', width: `${paso * 33.333}%`, background: color.accent } })))
+      React.createElement('div', null, React.createElement('div', { style: { fontSize: 21, fontWeight: 800, letterSpacing: '-.02em' } }, 'Ruta del día'), React.createElement('div', { style: { fontSize: 12, color: color.soft, marginTop: 3 } }, localidad)), React.createElement('div', { style: { fontSize: 11, color: color.soft, textAlign: 'right' } }, 'PASO ', paso, ' DE ', pasosTotales, React.createElement('div', { style: { marginTop: 5, height: 4, width: 72, background: color.line, borderRadius: 5, overflow: 'hidden' } }, React.createElement('div', { style: { height: '100%', width: `${Math.min(100, paso / pasosTotales * 100)}%`, background: color.accent } })))
     ),
     mensaje && React.createElement('div', { style: { padding: '10px 12px', borderRadius: 10, background: color.ok, color: color.okText, fontSize: 12, fontWeight: 700, margin: '10px 0' } }, mensaje),
     jornadaActiva && React.createElement('div', { style: { background: color.surface, border: `1px solid ${color.line}`, borderRadius: 12, padding: 11, margin: '10px 0 14px' } }, React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 800 } }, React.createElement('span', null, 'AGUA DISPONIBLE'), React.createElement('span', { style: { color: porcentajeAgua <= 15 ? 'var(--danger-text)' : color.okText } }, aguaDisponibleNumero.toFixed(2), ' L')), React.createElement('div', { style: { height: 8, background: color.line, borderRadius: 8, overflow: 'hidden', marginTop: 7 } }, React.createElement('div', { style: { height: '100%', width: `${porcentajeAgua}%`, background: porcentajeAgua <= 15 ? 'var(--danger-text)' : color.accent, transition: 'width .18s ease' } })), React.createElement('div', { style: { fontSize: 10, color: color.soft, marginTop: 8, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 } }, React.createElement('span', null, 'Capacidad del tanque: ', capacidadTanqueRuta.toFixed(2), ' L'), React.createElement('span', null, 'Cargado en el día: ', aguaCargadaNumero.toFixed(2), ' L'), React.createElement('span', null, 'Litros vendidos: ', litrosVendidosRuta.toFixed(2), ' L'), React.createElement('span', null, 'Litros disponibles: ', aguaDisponibleNumero.toFixed(2), ' L'), React.createElement('span', null, 'Garrafones vendidos: ', garrafonesVendidosRuta.toFixed(2)), React.createElement('span', { style: { gridColumn: '1 / -1', fontWeight: 800, color: color.ink } }, 'Medidor lógico acumulado: ', medidorLogicoRuta === null ? '—' : medidorLogicoRuta.toFixed(2), ' contador · lectura física solo al cierre'))),
@@ -225,9 +234,22 @@ function FlujoChoferRapido({
       jornadaActiva && React.createElement('div', { style: { background: color.surface, border: `1px solid ${color.line}`, borderRadius: 11, padding: 10, margin: '12px 0 10px' } }, React.createElement('div', { style: { fontSize: 10, color: color.faint, fontWeight: 800, letterSpacing: '.08em' } }, 'ASIGNACIÓN OPERATIVA'), React.createElement('div', { style: { fontSize: 13, fontWeight: 800, marginTop: 4 } }, '🚚 ', vehiculoNombreRuta), React.createElement('div', { style: { fontSize: 11, color: color.soft, marginTop: 3 } }, 'Vehículo ID: ', vehiculoIdRuta, ' · Medidor: ', medidorNombreRuta, ' · Medidor ID: ', medidorIdRuta), React.createElement('div', { style: { fontSize: 10, color: color.soft, marginTop: 4 } }, medidorRuta.digitos, ' dígitos · el sexto dígito incrementa cada ', medidorRuta.litrosPorIncremento, ' L')),
       React.createElement('input', { value: busqueda, onChange: e => setBusqueda(e.target.value), placeholder: 'Buscar por nombre o dirección…', style: { width: '100%', boxSizing: 'border-box', padding: '13px 14px', border: `1px solid ${color.line}`, borderRadius: 11, background: color.surface, color: color.ink, fontSize: 14, margin: '14px 0 10px' }, autoFocus: true }),
       React.createElement('div', { style: { fontSize: 11, fontWeight: 800, color: color.faint, letterSpacing: '.08em', margin: '12px 2px 8px' } }, 'CLIENTES · ', clientesFiltrados.length),
-      React.createElement('div', null, clientesFiltrados.map(c => React.createElement('button', { key: c.id, onClick: () => seleccionarCliente(c), style: { width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, border: `1px solid ${atendido(c) ? 'var(--ok)' : color.line}`, background: atendido(c) ? color.ok : color.surface, borderRadius: 12, padding: '13px 12px', marginBottom: 8, cursor: 'pointer', color: color.ink } }, React.createElement('span', { style: { minWidth: 0 } }, React.createElement('span', { style: { display: 'block', fontWeight: 800, fontSize: 14 } }, c.nombre || 'Cliente sin nombre'), React.createElement('span', { style: { display: 'block', fontSize: 11, color: color.soft, marginTop: 3 } }, c.domicilio || c.direccion || 'Sin dirección', c.localidadNombre || c.localidad ? ' · ' + (c.localidadNombre || c.localidad) : '')), React.createElement('span', { style: { fontSize: 22, color: atendido(c) ? 'var(--ok-text)' : color.faint, fontWeight: 800 } }, atendido(c) ? '✓' : '›')))),
+      React.createElement('div', null, clientesFiltrados.map(c => React.createElement('button', { key: c.id, onClick: () => seleccionarCliente(c), style: { width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, border: `1px solid ${atendido(c) ? 'var(--ok)' : color.line}`, background: atendido(c) ? color.ok : color.surface, borderRadius: 12, padding: '13px 12px', marginBottom: 8, cursor: 'pointer', color: color.ink } }, React.createElement('span', { style: { minWidth: 0 } }, React.createElement('span', { style: { display: 'block', fontWeight: 800, fontSize: 14 } }, c.nombre || 'Cliente sin nombre'), React.createElement('span', { style: { display: 'block', fontSize: 11, color: color.soft, marginTop: 3 } }, c.domicilio || c.direccion || 'Sin dirección', c.localidadNombre || c.localidad ? ' · ' + (c.localidadNombre || c.localidad) : ''), React.createElement('span', { style: { display: 'block', fontSize: 10, color: c.metodoServicio === 'relleno_por_medicion' ? 'var(--info-text)' : color.faint, marginTop: 4, fontWeight: 800 } }, c.metodoServicio === 'relleno_por_medicion' ? 'Medido por medidor · Requiere nota y firma' : 'Doméstica')), React.createElement('span', { style: { fontSize: 22, color: atendido(c) ? 'var(--ok-text)' : color.faint, fontWeight: 800 } }, atendido(c) ? '✓' : '›')))),
       clientesFiltrados.length === 0 && React.createElement('div', { style: { textAlign: 'center', padding: 28, color: color.faint, fontSize: 13 } }, 'No hay clientes para esta búsqueda o localidad.')
     ),
+    paso === 4 && cliente && typeof ServicioRelleno === 'function' && React.createElement(ServicioRelleno, { cliente, jornada: jornadaActiva, localidad: localidadDeRuta, vehiculo: vehiculoRuta, medidor: medidorRuta, tarifas, medicion, currentUser, onClose: volverRuta, onCompletado: resultado => {
+      const servicio = resultado?.servicio || {};
+      const lecturaDespues = servicio.lecturaCamion?.lecturaCalculadaDespues;
+      const aguaDespues = servicio.stockMovil?.aguaDisponibleDespuesLitros;
+      setAtendidos(actual => ({ ...actual, [claveAtendido(cliente)]: { tipo: 'relleno_por_medicion', litrosRellenados: servicio.medicion?.litrosRellenados || 0, garrafonesEquivalentes: servicio.medicion?.garrafonesEquivalentes || 0, total: servicio.venta?.total || 0, estado: servicio.estado || 'completado', fecha: new Date().toISOString() } }));
+      if (lecturaDespues != null) setLecturaActualRuta(String(lecturaDespues));
+      if (aguaDespues != null) setAguaDisponibleRuta(String(aguaDespues));
+      setPaso(1);
+      setCliente(null);
+      setTarifaSeleccionadaId('');
+      mostrar('Servicio medido guardado; nota y PDF disponibles');
+    } }),
+    paso === 1 && jornadaActiva && typeof BorradoresRelleno === 'function' && React.createElement(BorradoresRelleno, { currentUser, jornada: jornadaActiva, localidad: localidadDeRuta, vehiculo: vehiculoRuta, medidor: medidorRuta, tarifas, medicion }),
     paso === 2 && cliente && React.createElement(React.Fragment, null,
       React.createElement('button', { onClick: volverRuta, style: { border: 0, background: 'transparent', color: color.soft, padding: '8px 0', cursor: 'pointer', fontWeight: 700 } }, '← Volver a la ruta'),
       React.createElement('div', { style: { background: color.surface, border: `1px solid ${color.line}`, borderRadius: 14, padding: 15, margin: '8px 0 14px' } }, React.createElement('div', { style: { fontSize: 18, fontWeight: 800 } }, cliente.nombre), React.createElement('div', { style: { color: color.soft, fontSize: 12, marginTop: 6 } }, cliente.domicilio || cliente.direccion || 'Dirección no capturada'), React.createElement('div', { style: { color: color.soft, fontSize: 12, marginTop: 3 } }, 'ID del tinaco: ', cliente.idTinaco || cliente.tinacoId || 'Sin ID')),

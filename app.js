@@ -3,7 +3,7 @@ function App() {
     currentUser, authChecked, firestoreError,
     locked, setLocked,
     isOnline,
-    productos, clientes, localidades, notas, creditos, jornadas, cargasAgua, medicion, tarifas, vehiculos, medidores,
+    productos, clientes, localidades, notas, creditos, jornadas, cargasAgua, medicion, tarifas, vehiculos, medidores, servicios, comprobantes,
     pendCounts, totalPendientes,
   } = useSesion();
   const [tab, setTab] = useState('home');
@@ -66,7 +66,9 @@ function App() {
     tarifas,
     vehiculos,
     medidores,
-    offlineVentaResumen
+    offlineVentaResumen,
+    servicios,
+    comprobantes
   };
   if (!authChecked) return React.createElement("div", {
     style: {

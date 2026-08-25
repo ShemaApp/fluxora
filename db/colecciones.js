@@ -21,5 +21,7 @@ const COLECCIONES = {
   DEVOLUCIONES: 'devoluciones',
   CIERRES_CAJA: 'cierres_caja',
   GASTOS: 'gastos',
+  SERVICIOS: 'servicios',
+  COMPROBANTES: 'comprobantes',
   META: '_meta'
 };

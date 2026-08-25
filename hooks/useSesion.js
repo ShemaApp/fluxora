@@ -20,6 +20,8 @@ function useSesion() {
   const [tarifas, setTarifas] = useState([]);
   const [vehiculos, setVehiculos] = useState([]);
   const [medidores, setMedidores] = useState([]);
+  const [servicios, setServicios] = useState([]);
+  const [comprobantes, setComprobantes] = useState([]);
   const [pendCounts, setPendCounts] = useState({
     productos: 0,
     clientes: 0,
@@ -30,7 +32,9 @@ function useSesion() {
     cargasAgua: 0,
     tarifas: 0,
     vehiculos: 0,
-    medidores: 0
+    medidores: 0,
+    servicios: 0,
+    comprobantes: 0
   });
   const totalPendientes = Object.values(pendCounts).reduce((s, n) => s + n, 0);
   useEffect(() => {
@@ -138,6 +142,16 @@ function useSesion() {
       : currentUser.role === 'admin'
         ? db.collection(COLECCIONES.CARGAS_AGUA).orderBy('fechaHora', 'desc').limit(300)
         : null;
+    const serviciosQuery = currentUser.role === 'repartidor'
+      ? db.collection(COLECCIONES.SERVICIOS).where('repartidorUid', '==', currentUser.uid).limit(300)
+      : currentUser.role === 'admin'
+        ? db.collection(COLECCIONES.SERVICIOS).orderBy('createdAt', 'desc').limit(500)
+        : null;
+    const comprobantesQuery = currentUser.role === 'repartidor'
+      ? db.collection(COLECCIONES.COMPROBANTES).where('createdByUid', '==', currentUser.uid).limit(300)
+      : currentUser.role === 'admin'
+        ? db.collection(COLECCIONES.COMPROBANTES).orderBy('createdAt', 'desc').limit(500)
+        : null;
     const unsubs = [db.collection('_meta').doc('medicion_venta').onSnapshot(snap => {
       setMedicion(snap.exists ? { id: snap.id, ...snap.data() } : null);
     }, errorHandler), db.collection(COLECCIONES.TARIFAS).onSnapshot({
@@ -207,7 +221,17 @@ function useSesion() {
       lista.sort((a, b) => new Date(b.fechaHora || 0) - new Date(a.fechaHora || 0));
       setCargasAgua(lista);
       pend('cargasAgua', snap);
-    }, errorHandler)] : [() => setCargasAgua([])])];
+    }, errorHandler)] : [() => setCargasAgua([])]), ...(serviciosQuery ? [serviciosQuery.onSnapshot({ includeMetadataChanges: true }, snap => {
+      const lista = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      lista.sort((a, b) => new Date(b.createdAt || b.creadoEn || 0) - new Date(a.createdAt || a.creadoEn || 0));
+      setServicios(lista);
+      pend('servicios', snap);
+    }, errorHandler)] : [() => setServicios([])]), ...(comprobantesQuery ? [comprobantesQuery.onSnapshot({ includeMetadataChanges: true }, snap => {
+      const lista = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      lista.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+      setComprobantes(lista);
+      pend('comprobantes', snap);
+    }, errorHandler)] : [() => setComprobantes([])])];
     return () => unsubs.forEach(u => u());
   }, [currentUser]);
 
@@ -261,7 +285,7 @@ function useSesion() {
     currentUser, authChecked, firestoreError,
     locked, setLocked,
     isOnline,
-    productos, clientes, localidades, notas, creditos, jornadas, cargasAgua, medicion, tarifas, vehiculos, medidores,
+    productos, clientes, localidades, notas, creditos, jornadas, cargasAgua, medicion, tarifas, vehiculos, medidores, servicios, comprobantes,
     pendCounts, totalPendientes,
   };
 }

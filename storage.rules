@@ -1,0 +1,22 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function autenticado() {
+      return request.auth != null;
+    }
+
+    function esAdmin() {
+      return autenticado() && firestore.get(/databases/(default)/documents/usuarios/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    match /comprobantes/{uid}/{archivo} {
+      allow read: if autenticado() && (request.auth.uid == uid || esAdmin());
+      allow write: if autenticado() && (request.auth.uid == uid || esAdmin())
+        && request.resource != null
+        && request.resource.contentType == 'application/pdf'
+        && request.resource.size < 10 * 1024 * 1024;
+      allow delete: if autenticado() && (request.auth.uid == uid || esAdmin());
+    }
+  }
+}

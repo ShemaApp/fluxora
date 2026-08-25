@@ -38,6 +38,12 @@ try {
 }
 const auth = firebase.auth();
 const db = firebase.firestore();
+let storage = null;
+try {
+  storage = typeof firebase.storage === 'function' ? firebase.storage() : null;
+} catch (error) {
+  console.warn('Storage no está disponible; el servicio de relleno requerirá reintento:', error);
+}
 
 if (['localhost', '127.0.0.1'].includes(location.hostname)) {
   self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;

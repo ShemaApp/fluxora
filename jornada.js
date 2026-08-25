@@ -2,7 +2,7 @@
    La localidad es la unidad operativa; vehículo y medidor llegan como
    referencias separadas desde su asignación administrativa. */
 const CAPACIDAD_TANQUE_LITROS = 5000;
-function JornadaMedidor({ localidades = [], jornadas = [], notas = [], clientes = [], cargasAgua = [], medicion = null, vehiculos = [], medidores = [], currentUser = {}, onIrA }) {
+function JornadaMedidor({ localidades = [], jornadas = [], notas = [], clientes = [], cargasAgua = [], servicios = [], medicion = null, vehiculos = [], medidores = [], currentUser = {}, onIrA }) {
   const localidadesDisponibles = obtenerLocalidadesAsignadas({ localidades, currentUser, localidadIds: currentUser.localidadIds });
   const jornadaAbierta = (jornadas || []).find(j => j.estado === 'abierta' && (currentUser.role === 'admin' || j.repartidorId === currentUser.uid));
   const [form, setForm] = useState(() => {
@@ -43,7 +43,7 @@ function JornadaMedidor({ localidades = [], jornadas = [], notas = [], clientes 
     const localidadNombre = jornadaAbierta?.localidadNombre || form.localidadNombre || localidadActual?.nombre;
     return (localidadId && String(c.localidadId || '') === String(localidadId)) || (!c.localidadId && localidadNombre && String(c.localidadNombre || c.localidad || c.domicilio || '').trim().toLowerCase() === String(localidadNombre).trim().toLowerCase());
   });
-  const clientesAtendidos = new Set((notas || []).filter(n => jornadaAbierta && n.capturadoPorUid === jornadaAbierta.repartidorId && new Date(n.fecha || 0).getTime() >= new Date(jornadaAbierta.fechaInicio || 0).getTime()).map(n => n.clienteId));
+  const clientesAtendidos = new Set((notas || []).filter(n => jornadaAbierta && n.capturadoPorUid === jornadaAbierta.repartidorId && new Date(n.fecha || 0).getTime() >= new Date(jornadaAbierta.fechaInicio || 0).getTime()).map(n => n.clienteId).concat((servicios || []).filter(servicio => jornadaAbierta && servicio.jornadaId === jornadaAbierta.id && servicio.estado === 'completado').map(servicio => servicio.clienteId)));
   const cargasJornada = (cargasAgua || []).filter(carga => jornadaAbierta && carga.jornadaId === jornadaAbierta.id);
   const litrosRecargadosJornada = cargasJornada.filter(carga => carga.tipo === 'recarga').reduce((total, carga) => total + Number(carga.litros || 0), 0);
   const capacidadTanqueLitros = Number(jornadaAbierta?.capacidadTanqueLitros || CAPACIDAD_TANQUE_LITROS);
@@ -166,28 +166,44 @@ function JornadaMedidor({ localidades = [], jornadas = [], notas = [], clientes 
     const clavesSincronizadas = new Set(ventasJornadaSincronizadas.map(v => v.operacionIdempotente || v.ventaOfflineId || v.id));
     const ventasPendientes = (pendientesLocales.ventas || []).filter(v => !clavesSincronizadas.has(v.operacionIdempotente || v.id));
     const ventasJornada = ventasJornadaSincronizadas.concat(ventasPendientes);
-    const litrosVendidos = ventasJornada.reduce((total, venta) => {
+    const serviciosJornada = (servicios || []).filter(servicio => servicio.jornadaId === jornadaAbierta.id && servicio.estado === 'completado').map(servicio => ({
+      ...servicio,
+      fecha: servicio.createdAt || servicio.creadoEn,
+      litrosVendidos: Number(servicio.medicion?.litrosRellenados || 0),
+      garrafones: Number(servicio.venta?.garrafonesCobrables || servicio.medicion?.garrafonesEquivalentes || 0),
+      total: Number(servicio.venta?.total || 0),
+      formaPago: 'facturado',
+      tarifaId: servicio.venta?.tarifaId || '',
+      tarifaNombre: servicio.venta?.tarifaNombre || '',
+      tarifaSnapshot: servicio.venta?.tarifaSnapshot || null,
+      precioUnitario: Number(servicio.venta?.precioUnitarioAplicado || 0),
+      incrementoContador: Number(servicio.lecturaCamion?.incrementoContador || 0),
+      tipoOperacion: 'relleno_por_medicion'
+    }));
+    const operacionesJornada = ventasJornada.concat(serviciosJornada);
+    const litrosVendidos = operacionesJornada.reduce((total, venta) => {
       const litrosDirectos = Number(venta.litrosVendidos || 0);
       if (litrosDirectos > 0) return total + litrosDirectos;
       return total + (venta.items || []).reduce((suma, item) => { const litrosExplicitos = Number(item.litrosVendidos || item.litros || 0); const litrosItem = litrosExplicitos > 0 ? litrosExplicitos : Number(item.cant || 0) * Number(jornadaAbierta.litrosPorUnidad || FACTOR_LITROS_POR_GARRAFON); return suma + litrosItem; }, 0);
     }, 0);
-    const incrementoContadorCalculado = ventasJornada.reduce((total, venta) => {
+    const incrementoContadorCalculado = operacionesJornada.reduce((total, venta) => {
       const incrementoDirecto = Number(venta.incrementoContador || 0);
       if (incrementoDirecto > 0) return total + incrementoDirecto;
       const litrosVenta = Number(venta.litrosVendidos || 0);
       return total + (incrementoEscalaJornada > 0 ? litrosVenta / litrosEscalaJornada * incrementoEscalaJornada : 0);
     }, 0);
-    const resumenTarifas = Object.values(ventasJornada.reduce((mapa, venta) => {
+    const resumenTarifas = Object.values(operacionesJornada.reduce((mapa, venta) => {
       const snapshot = venta.tarifaSnapshot || { id: venta.tarifaId || 'tarifa-base-historica', nombre: venta.tarifaNombre || venta.unidadComercial || 'Tarifa base', unidadComercial: venta.unidadComercial || jornadaAbierta.unidadComercial || 'Unidad', litrosPorUnidad: Number(venta.litrosPorUnidad || litrosEscalaJornada), incrementoContadorPorUnidad: Number(venta.incrementoContadorPorUnidad || incrementoEscalaJornada), precioUnitario: Number(venta.precioUnitario || 0) };
       const clave = String(snapshot.id || venta.tarifaId || snapshot.nombre);
       const unidades = Number(venta.garrafones || (venta.items || []).reduce((suma, item) => suma + Number(item.cant || 0), 0));
       const litros = Number(venta.litrosVendidos || unidades * Number(snapshot.litrosPorUnidad || 0));
       const subtotal = Number(venta.total || venta.importe || 0);
-      const registro = mapa[clave] || { tarifaId: snapshot.id || clave, tarifaNombre: snapshot.nombre || 'Tarifa', unidadComercial: snapshot.unidadComercial || '', litrosPorUnidad: Number(snapshot.litrosPorUnidad || 0), incrementoContadorPorUnidad: Number(snapshot.incrementoContadorPorUnidad || 0), precioUnitario: Number(snapshot.precioUnitario || 0), unidades: 0, litros: 0, subtotal: 0, efectivo: 0, credito: 0 };
+      const registro = mapa[clave] || { tarifaId: snapshot.id || clave, tarifaNombre: snapshot.nombre || 'Tarifa', unidadComercial: snapshot.unidadComercial || '', litrosPorUnidad: Number(snapshot.litrosPorUnidad || 0), incrementoContadorPorUnidad: Number(snapshot.incrementoContadorPorUnidad || 0), precioUnitario: Number(snapshot.precioUnitario || 0), unidades: 0, litros: 0, subtotal: 0, efectivo: 0, credito: 0, facturado: 0 };
       registro.unidades += unidades;
       registro.litros += litros;
       registro.subtotal += subtotal;
       if (String(venta.formaPago || '').toLowerCase() === 'credito') registro.credito += subtotal;
+      else if (String(venta.formaPago || '').toLowerCase() === 'facturado') registro.facturado += subtotal;
       else registro.efectivo += subtotal;
       mapa[clave] = registro;
       return mapa;
@@ -205,7 +221,7 @@ function JornadaMedidor({ localidades = [], jornadas = [], notas = [], clientes 
       const lecturaFinalRef = db.collection('lecturas_medidor').doc(`${jornadaAbierta.id}-final`);
       const escribirCierre = tx => {
         tx.update(jornadaRef, {
-          estado: 'cerrada', lecturaActual: final, lecturaFinal: final, lecturaCalculadaFinal, incrementoContadorMedido, incrementoContadorCalculado, diferenciaContador, litrosMedidos, litrosCalculadosPorVentas, ventasRegistradas: ventasJornada.length,
+          estado: 'cerrada', lecturaActual: final, lecturaFinal: final, lecturaCalculadaFinal, incrementoContadorMedido, incrementoContadorCalculado, diferenciaContador, litrosMedidos, litrosCalculadosPorVentas, ventasRegistradas: operacionesJornada.length, serviciosMedidos: serviciosJornada.length,
           litrosVendidos, resumenTarifas, diferenciaLitros, diferenciaLitrosFisicaContraCalculada, tipoDiferencia, aguaDisponibleLitros: Math.max(0, Number(jornadaAbierta.aguaDisponibleLitros || 0)), diferenciaGarrafones: Number(jornadaAbierta.litrosPorUnidad || FACTOR_LITROS_POR_GARRAFON) ? diferenciaLitros / Number(jornadaAbierta.litrosPorUnidad || FACTOR_LITROS_POR_GARRAFON) : null,
           fechaCierre, usuarioCierreUid: currentUser.uid, usuarioCierreNombre: currentUser.nombre || '', explicacionDiferencia: ''
         });
@@ -252,7 +268,7 @@ function JornadaMedidor({ localidades = [], jornadas = [], notas = [], clientes 
       React.createElement('input', { value: lecturaFinal, onChange: e => setLecturaFinal(e.target.value), inputMode: 'decimal', placeholder: 'Lectura final del medidor', style: { width: '100%', padding: 12, boxSizing: 'border-box', borderRadius: 9, border: '1px solid var(--line-strong)', background: 'var(--surface)', color: 'var(--ink)', marginBottom: 10 } }),
       React.createElement('button', { onClick: cerrar, style: { width: '100%', padding: 14, border: 0, borderRadius: 9, background: 'var(--accent)', color: 'var(--ink)', fontWeight: 800 } }, 'Cerrar jornada y conciliar'),
       React.createElement('div', { style: { marginTop: 18, fontSize: 12, fontWeight: 800 } }, 'CLIENTES ASIGNADOS'),
-      clientesJornada.length ? clientesJornada.map(c => React.createElement('div', { key: c.id, style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '10px 0', borderBottom: '1px solid var(--line)' } }, React.createElement('div', null, React.createElement('strong', { style: { fontSize: 13 } }, c.nombre || 'Cliente'), React.createElement('div', { style: { color: 'var(--ink-soft)', fontSize: 11 } }, c.localidadNombre || c.localidad || 'Localidad asignada')), clientesAtendidos.has(c.id) ? React.createElement('span', { style: { color: 'var(--ok-text)', fontWeight: 800, fontSize: 11 } }, '✓ Atendido') : React.createElement('button', { onClick: () => onIrA && onIrA('ruta'), style: { border: 0, borderRadius: 8, padding: '9px 12px', background: 'var(--accent)', color: 'var(--ink)', fontWeight: 800, fontSize: 11 } }, 'Vender'))) : React.createElement('div', { style: { color: 'var(--ink-faint)', fontSize: 12, padding: '10px 0' } }, 'No hay clientes asignados a esta localidad.')
+      clientesJornada.length ? clientesJornada.map(c => React.createElement('div', { key: c.id, style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '10px 0', borderBottom: '1px solid var(--line)' } }, React.createElement('div', null, React.createElement('strong', { style: { fontSize: 13 } }, c.nombre || 'Cliente'), React.createElement('div', { style: { color: 'var(--ink-soft)', fontSize: 11 } }, c.localidadNombre || c.localidad || 'Localidad asignada'), React.createElement('div', { style: { color: c.metodoServicio === 'relleno_por_medicion' ? 'var(--info-text)' : 'var(--ink-faint)', fontSize: 10, fontWeight: 800, marginTop: 3 } }, c.metodoServicio === 'relleno_por_medicion' ? 'Medido por medidor · Nota y firma' : 'Doméstica')), clientesAtendidos.has(c.id) ? React.createElement('span', { style: { color: 'var(--ok-text)', fontWeight: 800, fontSize: 11 } }, '✓ Atendido') : React.createElement('button', { onClick: () => onIrA && onIrA('ruta'), style: { border: 0, borderRadius: 8, padding: '9px 12px', background: 'var(--accent)', color: 'var(--ink)', fontWeight: 800, fontSize: 11 } }, 'Vender'))) : React.createElement('div', { style: { color: 'var(--ink-faint)', fontSize: 12, padding: '10px 0' } }, 'No hay clientes asignados a esta localidad.')
     ) : React.createElement('div', { style: { background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, padding: 14 } },
       React.createElement('div', { style: { fontSize: 12, fontWeight: 800, marginBottom: 10 } }, 'INICIAR JORNADA'),
       React.createElement('select', { value: form.localidadId, onChange: e => seleccionarLocalidad(e.target.value), style: { width: '100%', padding: 11, marginBottom: 9, borderRadius: 8, border: '1px solid var(--line-strong)', background: 'var(--surface)', color: 'var(--ink)' } }, React.createElement('option', { value: '' }, 'Selecciona localidad'), localidadesDisponibles.map(localidad => React.createElement('option', { key: localidad.id, value: localidad.id }, localidad.nombre))),
