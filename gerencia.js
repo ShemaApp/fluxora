@@ -1,5 +1,11 @@
 const esVentaEfectivo = fp => fp === 'efectivo' || fp === 'contado';
 const mismoDia = (isoA, isoB) => new Date(isoA).toDateString() === new Date(isoB).toDateString();
+const diaLocalCaja = fecha => {
+    const valor = fecha instanceof Date ? fecha : new Date(fecha);
+    const pad = numero => String(numero).padStart(2, '0');
+    return `${valor.getFullYear()}-${pad(valor.getMonth() + 1)}-${pad(valor.getDate())}`;
+};
+const etiquetaCierre = cierre => cierre.turnoNumero ? 'Cierre ' + cierre.turnoNumero : 'Cierre histórico';
 function Gerencia({ currentUser, notas, creditos }) {
     const isAdmin = currentUser.role === 'admin';
     const [gastos, setGastos] = useState(null);
@@ -76,19 +82,25 @@ function Gerencia({ currentUser, notas, creditos }) {
             return;
         await db.collection('gastos').doc(g.id).delete();
     };
-    const hoyISO = new Date().toISOString();
+    const ahora = new Date();
+    const hoyISO = ahora.toISOString();
+    const claveDiaCaja = diaLocalCaja(hoyISO);
+    const cierresHoy = (cierres || []).filter(c => mismoDia(c.fecha, hoyISO));
+    const ultimoCierreHoy = cierresHoy.slice().sort((a, b) => Date.parse(b.fecha || '') - Date.parse(a.fecha || ''))[0] || null;
+    const inicioDiaLocal = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate()).toISOString();
+    const inicioBloqueCaja = ultimoCierreHoy?.fecha || inicioDiaLocal;
+    const enBloqueActual = valor => Number.isFinite(Date.parse(valor || '')) && Date.parse(valor) >= Date.parse(inicioBloqueCaja);
     const misGastos = gastos ? gastos.filter(g => g.capturadoPorUid === currentUser.uid) : [];
-    const notasCajaHoy = (notas || []).filter(n => mismoDia(n.fecha, hoyISO) && (isAdmin || n.capturadoPorUid === currentUser.uid));
+    const notasCajaHoy = (notas || []).filter(n => enBloqueActual(n.fecha) && (isAdmin || n.capturadoPorUid === currentUser.uid));
     const misNotasHoy = notasCajaHoy;
     const ventaEfectivoHoy = notasCajaHoy.filter(n => esVentaEfectivo(n.formaPago)).reduce((s, n) => s + Number(n.total || 0), 0);
     // Abonos: viven como arreglo embebido dentro de cada documento de creditos,
-    // así que se aplanan primero y luego se filtran igual que cualquier otro
-    // movimiento del día (por quién lo capturó y por fecha).
+    // así que se aplanan primero y luego se filtran por el bloque actual.
     const misAbonosHoy = (creditos || [])
         .flatMap(c => (c.abonos || []).map(a => ({ ...a, clienteNombre: c.clienteNombre })))
-        .filter(a => mismoDia(a.fecha, hoyISO) && (isAdmin || a.capturadoPorUid === currentUser.uid));
+        .filter(a => enBloqueActual(a.fecha) && (isAdmin || a.capturadoPorUid === currentUser.uid));
     const abonoEfectivoHoy = misAbonosHoy.filter(a => a.formaPago === 'efectivo').reduce((s, a) => s + a.monto, 0);
-    const misGastosHoy = (isAdmin ? (gastos || []) : misGastos).filter(g => mismoDia(g.fecha, hoyISO));
+    const misGastosHoy = (isAdmin ? (gastos || []) : misGastos).filter(g => enBloqueActual(g.fecha));
     const gastoEfectivoHoy = misGastosHoy.filter(g => g.formaPago === 'efectivo').reduce((s, g) => s + g.monto, 0);
     const gastosTarjetaHoy = misGastosHoy.filter(g => g.formaPago === 'tarjeta');
     // Caja real: ventas efectivo + pagos de crédito - salidas autorizadas en efectivo.
@@ -111,12 +123,37 @@ function Gerencia({ currentUser, notas, creditos }) {
             items: items.length ? items : (n.items || []).map(item => ({ ...item, cantSolicitada: item.cant, cantAplicada: 0, cantFaltante: item.cant }))
         }];
     });
-    const misCierresHoy = (cierres || []).filter(c => c.capturadoPorUid === currentUser.uid && mismoDia(c.fecha, hoyISO));
+    const borradorCierre = typeof appReadDraft === 'function' ? appReadDraft('cierre_caja', currentUser.uid) : null;
+    const abrirCierre = () => setCierreOpen(true);
+    const guardarBorradorCierre = () => {
+        if (typeof appWriteDraft !== 'function') return flash('El guardado local de borradores no está disponible');
+        appWriteDraft('cierre_caja', currentUser.uid, {
+            fecha: new Date().toISOString(),
+            diaLocal: claveDiaCaja,
+            ventaEfectivo: ventaEfectivoHoy,
+            abonoEfectivo: abonoEfectivoHoy,
+            gastoEfectivo: gastoEfectivoHoy,
+            formulaBase: formulaBaseHoy,
+            efectivoAEntregar: efectivoEsperadoHoy,
+            numVentas: misNotasHoy.length,
+            numClientesAtendidos: new Set(misNotasHoy.map(n => n.clienteId)).size,
+            numIncidenciasOperacion: incidenciasOperacionHoy.length,
+            estado: 'borrador_local'
+        });
+        setCierreOpen(false);
+        flash('Borrador de cierre guardado en este dispositivo');
+    };
     const confirmarCierre = async () => {
         setCierreSaving(true);
         try {
-            await db.collection('cierres_caja').add({
+            const sufijoCierre = typeof uid === 'function' ? uid() : Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
+            const idCierreCaja = `caja-${claveDiaCaja}-${sufijoCierre}`;
+            const datosCierre = {
                 fecha: new Date().toISOString(),
+                diaLocal: claveDiaCaja,
+                cierreClave: idCierreCaja,
+                turnoNumero: cierresHoy.length + 1,
+                estado: 'cerrado',
                 capturadoPorUid: currentUser.uid,
                 capturadoPorNombre: currentUser.nombre,
                 ventaEfectivo: ventaEfectivoHoy,
@@ -129,8 +166,10 @@ function Gerencia({ currentUser, notas, creditos }) {
                 numIncidenciasOperacion: incidenciasOperacionHoy.length,
                 incidenciasOperacion: incidenciasOperacionHoy,
                 gastosTarjetaPendientes: gastosTarjetaHoy.map(g => ({ pagadoA: g.pagadoA, monto: g.monto })),
-            });
-            flash('✅ Caja cerrada — comprobante guardado');
+            };
+            await db.collection('cierres_caja').doc(idCierreCaja).set(datosCierre);
+            if (typeof appClearDraft === 'function') appClearDraft('cierre_caja', currentUser.uid);
+            flash(`✅ Cierre ${datosCierre.turnoNumero} guardado en el historial`);
             setCierreOpen(false);
         }
         catch (e) {
@@ -192,11 +231,11 @@ function Gerencia({ currentUser, notas, creditos }) {
                 gastosTarjetaHoy.map(g => React.createElement(Row, { key: g.id, style: { justifyContent: 'space-between', fontSize: 12, marginBottom: 3 } },
                     React.createElement("span", null, g.pagadoA),
                     React.createElement("span", { style: { fontWeight: 700 } }, fmt(g.monto))))),
-            React.createElement(BFill, { onClick: () => setCierreOpen(true), style: { width: '100%', marginTop: 12 } }, "\uD83D\uDD12 Cerrar caja de hoy"),
-            misCierresHoy.length > 0 && React.createElement("div", { style: { fontSize: 11, color: 'var(--ink-faint)', marginTop: 6, textAlign: 'center' } },
-                "Ya cerraste caja ",
-                misCierresHoy.length,
-                " vez/veces hoy \u2014 puedes volver a cerrar si algo cambi\u00F3, no bloquea nada.")),
+            React.createElement(BFill, { onClick: abrirCierre, style: { width: '100%', marginTop: 12 }, disabled: cierreSaving || cierres === null }, cierres === null ? 'Cargando cierre…' : "\uD83D\uDD12 Cerrar caja de hoy"),
+            cierresHoy.length > 0 && React.createElement("div", { style: { fontSize: 11, color: 'var(--ink-soft)', marginTop: 6, textAlign: 'center' } },
+                "Hoy hay ", cierresHoy.length, " cierre(s) guardado(s). Este será el cierre ", cierresHoy.length + 1, "."),
+            borradorCierre && React.createElement("div", { style: { fontSize: 11, color: 'var(--info-text)', marginTop: 5, textAlign: 'center' } },
+                "Hay un borrador local de cierre guardado en este dispositivo."),
         React.createElement(Card, null,
             React.createElement("div", { style: { fontSize: 11, color: 'var(--ink-faint)', fontWeight: 700, marginBottom: 10 } }, "REGISTRAR GASTO"),
             React.createElement(Lbl, null, "Pagado a"),
@@ -238,15 +277,15 @@ function Gerencia({ currentUser, notas, creditos }) {
                         " (pendiente reembolso)"),
                     React.createElement("span", null, fmt(g.monto)))))))),
         React.createElement(Card, null,
-            React.createElement("div", { style: { fontSize: 11, color: 'var(--ink-faint)', fontWeight: 700, marginBottom: 10 } }, isAdmin ? 'HISTORIAL DE CIERRES DE CAJA' : 'TUS CIERRES DE CAJA'),
+            React.createElement("div", { style: { fontSize: 11, color: 'var(--ink-faint)', fontWeight: 700, marginBottom: 10 } }, isAdmin ? 'HISTORIAL DE MOVIMIENTOS DE CAJA' : 'TUS MOVIMIENTOS DE CAJA'),
             cierres === null && React.createElement("div", { style: { fontSize: 13, color: 'var(--ink-faint)', textAlign: 'center', padding: '16px 0' } }, "Cargando\u2026"),
             cierres && cierres.length === 0 && React.createElement("div", { style: { fontSize: 13, color: 'var(--ink-faint)', textAlign: 'center', padding: '16px 0' } }, "Sin cierres registrados a\u00FAn"),
             cierres && cierres.map(c => React.createElement("div", { key: c.id, style: { paddingBottom: 8, borderBottom: '1px solid var(--line)', marginBottom: 8 } },
                 React.createElement(Row, { style: { justifyContent: 'space-between', marginBottom: 2 } },
-                    React.createElement("span", { style: { fontWeight: 700, fontSize: 13 } }, isAdmin ? c.capturadoPorNombre : fDate(c.fecha)),
+                    React.createElement("span", { style: { fontWeight: 700, fontSize: 13 } }, etiquetaCierre(c)),
                     React.createElement("span", { style: { fontWeight: 800, color: 'var(--accent-text)' } }, fmt(c.efectivoAEntregar))),
                 React.createElement("div", { style: { fontSize: 11, color: 'var(--ink-faint)' } },
-                    isAdmin ? fDate(c.fecha) : '',
+                    isAdmin ? (c.capturadoPorNombre || 'Sin responsable') + ' · ' + fDate(c.fecha) : fDate(c.fecha),
                     " ",
                     c.numVentas ?? c.numPedidos ?? 0,
                     " venta(s) · ",
@@ -280,8 +319,8 @@ function Gerencia({ currentUser, notas, creditos }) {
                         React.createElement(Row, { style: { paddingBottom: 8 } },
                             React.createElement(BOut, { onClick: () => { eliminar(g); setExpandedId(null); }, color: "var(--danger-text)", style: { flex: 1 } }, "\uD83D\uDDD1 Eliminar"))));
             })),
-        cierreOpen && React.createElement(Modal, { title: "\uD83D\uDD12 Cerrar caja de hoy", onClose: () => setCierreOpen(false) },
-            React.createElement("div", { style: { fontSize: 12, color: 'var(--ink-soft)', marginBottom: 14, lineHeight: 1.5 } }, "Esto guarda un comprobante permanente con los n\u00FAmeros de hoy. No bloquea que sigas registrando ventas o gastos despu\u00E9s \u2014 si algo cambia, puedes volver a cerrar."),
+        cierreOpen && React.createElement(Modal, { title: "¿Confirmas que quieres cerrar caja?", onClose: () => setCierreOpen(false) },
+            React.createElement("div", { style: { fontSize: 12, color: 'var(--ink-soft)', marginBottom: 14, lineHeight: 1.5 } }, "Se guardará este bloque de trabajo como un cierre independiente. Puedes volver a trabajar y cerrar caja nuevamente más tarde; cada cierre quedará en el historial. Elige una opción para continuar."),
             React.createElement(Card, { style: { background: 'var(--surface-2)' } },
                 React.createElement(Row, { style: { justifyContent: 'space-between', marginBottom: 4 } },
                     React.createElement("span", { style: { fontSize: 12 } }, "Venta efectivo"),
@@ -308,5 +347,8 @@ function Gerencia({ currentUser, notas, creditos }) {
                 new Set(misNotasHoy.map(n => n.clienteId)).size,
                 " cliente(s) atendido(s) hoy",
                 incidenciasOperacionHoy.length ? ' · ' + incidenciasOperacionHoy.length + ' incidencia(s) para revisión' : ''),
-            React.createElement(BFill, { onClick: confirmarCierre, style: { width: '100%' }, disabled: cierreSaving }, cierreSaving ? 'Guardando…' : '✅ Confirmar cierre')));
+            React.createElement(Row, { style: { gap: 8, flexWrap: 'wrap' } },
+                React.createElement(BOut, { onClick: () => setCierreOpen(false), style: { flex: '1 1 30%', minWidth: 100 } }, 'Cancelar'),
+                React.createElement(BOut, { onClick: guardarBorradorCierre, style: { flex: '1 1 30%', minWidth: 130, color: 'var(--info-text)' } }, 'Guardar borrador'),
+                React.createElement(BFill, { onClick: confirmarCierre, style: { flex: '1 1 30%', minWidth: 130 }, disabled: cierreSaving }, cierreSaving ? 'Guardando…' : 'Sí, cerrar caja')))));
 }
