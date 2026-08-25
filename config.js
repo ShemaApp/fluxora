@@ -221,7 +221,7 @@ function Configuracion({
       marginBottom: 16,
       flexWrap: 'wrap'
     }
-  }, [['perfil', 'Perfil'], ...(permisoAcciones(currentUser).password ? [['password', 'Contraseña']] : []), ['pin', 'PIN'], ['privacidad', 'Privacidad'], ...(isAdmin ? [['usuarios', 'Usuarios'], ['permisos', 'Permisos'], ['medicion', 'Medición y Venta'], ['flota', 'Vehículos / Medidores']] : [])].map(([v, l]) => React.createElement("button", {
+  }, [['perfil', 'Perfil'], ...(permisoAcciones(currentUser).password ? [['password', 'Contraseña']] : []), ['pin', 'PIN'], ['privacidad', 'Privacidad'], ...(isAdmin ? [['usuarios', 'Usuarios'], ['permisos', 'Permisos'], ['medicion', 'Medición'], ['flota', 'Flota']] : [])].map(([v, l]) => React.createElement("button", {
     key: v,
     onClick: () => {
       setSub(v);

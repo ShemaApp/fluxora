@@ -150,12 +150,12 @@ function GestionFlota({ currentUser = {}, medicion = null, vehiculos = [], medid
   );
 
   if (!esAdmin) return null;
-  const equivalencia = medicion ? `Configuración equivalente: 1 ${medicion.unidadComercial || 'unidad'} = ${Number(medicion.litrosPorUnidad || 0).toFixed(2)} L y +${Number(medicion.incrementoContadorPorUnidad || 0).toFixed(4)} contador físico.` : 'La configuración equivalente se tomará de Medición y Venta.';
+  const equivalencia = medicion ? `Configuración equivalente: 1 ${medicion.unidadComercial || 'unidad'} = ${Number(medicion.litrosPorUnidad || 0).toFixed(2)} L y +${Number(medicion.incrementoContadorPorUnidad || 0).toFixed(4)} contador físico.` : 'La configuración equivalente se tomará de Medición.';
   const medidoresVista = (medidores || []).length ? medidores.map(renderMedidor) : React.createElement('div', { style: { color: 'var(--ink-faint)', fontSize: 12, padding: '9px 0' } }, 'No hay medidores registrados todavía.');
   const vehiculosVista = (vehiculos || []).length ? vehiculos.map(renderVehiculo) : React.createElement('div', { style: { color: 'var(--ink-faint)', fontSize: 12, padding: '9px 0' } }, 'No hay vehículos registrados todavía.');
 
   return React.createElement('div', { className: 'fx-page-flota', style: { padding: '16px 12px 28px', color: 'var(--ink)' } },
-    React.createElement('div', { style: { fontSize: 22, fontWeight: 900, marginBottom: 4 } }, 'Vehículos y medidores'),
+    React.createElement('div', { style: { fontSize: 22, fontWeight: 900, marginBottom: 4 } }, 'Flota'),
     React.createElement('div', { style: { color: 'var(--ink-soft)', fontSize: 12, lineHeight: 1.45, marginBottom: 12 } }, 'Registra cada vehículo y su medidor como referencias separadas. Dar de alta un medidor no escribe ninguna lectura; el historial comienza cuando un REPARTIDOR abre su primera jornada.'),
     mensaje && React.createElement('div', { style: { background: 'var(--ok-bg)', color: 'var(--ok-text)', padding: 9, borderRadius: 8, fontSize: 12, fontWeight: 700, marginBottom: 8 } }, mensaje),
     error && React.createElement('div', { style: { background: 'var(--danger-bg)', color: 'var(--danger-text)', padding: 9, borderRadius: 8, fontSize: 12, fontWeight: 700, marginBottom: 8 } }, error),

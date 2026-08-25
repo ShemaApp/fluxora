@@ -33,7 +33,7 @@ function RepartidoresPanel({ clientes = [], localidades = [], jornadas = [], veh
       localidadesGrupo);
   });
   return React.createElement('div', { style: { padding: '16px 12px', color: 'var(--ink)' } },
-    React.createElement('div', { style: { fontSize: 21, fontWeight: 800, marginBottom: 4 } }, 'Repartidores y operación'),
+    React.createElement('div', { style: { fontSize: 21, fontWeight: 800, marginBottom: 4 } }, 'Operación'),
     React.createElement('div', { style: { color: 'var(--ink-soft)', fontSize: 12, lineHeight: 1.45, marginBottom: 14 } }, 'Consulta administrativa de localidades asignadas, vehículos, medidores, cargas y jornadas. Las ventas se registran desde Mi Ruta.'),
     React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 14 } },
       React.createElement('div', { style: { background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, padding: 11 } }, React.createElement('div', { style: { fontSize: 10, color: 'var(--ink-faint)', fontWeight: 800 } }, 'LOCALIDADES ACTIVAS'), React.createElement('strong', { style: { display: 'block', fontSize: 22, marginTop: 4 } }, localidadesActivas.length)),

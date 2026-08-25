@@ -109,7 +109,7 @@ function Creditos({
       fontWeight: 800,
       marginBottom: 12
     }
-  }, "💳 Créditos"), React.createElement(Card, {
+  }, "Créditos"), React.createElement(Card, {
     style: {
       borderLeft: '3px solid var(--warn-text)',
       marginBottom: 14

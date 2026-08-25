@@ -6,8 +6,8 @@
    y pinKey). */
 
 /* ── Modelo de permisos: constantes de rol + helpers de acceso ── */
-const TABS_INFO = [['nota', '📋', 'Venta administrativa'], ['clientes', '👥', 'Clientes fijos'], ['creditos', '💳', 'Créditos / Abonos'], ['ruta', '🚚', 'Mi Ruta'], ['jornada', '⏱', 'Mi Jornada / Cierre'], ['repartidores', '🧭', 'Repartidores / Cargas'], ['productos', '📦', 'Productos / Tarifas'], ['inventario', '📋', 'Inventario de agua'], ['reportes', '📈', 'Reportes operativos'], ['gerencia', '💰', 'Caja'], ['jerarquia', '🏢', 'Asignaciones / Localidades']];
-const EDICION_INFO = [['productos', '📦', 'Editar / dar de alta productos'], ['clientes', '👥', 'Editar / dar de alta clientes'], ['creditos', '💳', 'Registrar abonos a créditos']];
+const TABS_INFO = [['nota', '📋', 'Venta administrativa'], ['clientes', '👥', 'Clientes'], ['creditos', '💳', 'Créditos'], ['ruta', '🚚', 'Jornadas'], ['jornada', '⏱', 'Control'], ['repartidores', '🧭', 'Operación'], ['productos', '📦', 'Catálogo'], ['inventario', '📋', 'Inventario'], ['reportes', '📈', 'Reportes'], ['gerencia', '💰', 'Caja'], ['jerarquia', '🏢', 'Cobertura']];
+const EDICION_INFO = [['productos', '📦', 'Editar productos'], ['clientes', '👥', 'Editar clientes'], ['creditos', '💳', 'Registrar pagos']];
 const ACCIONES_INFO = [['password', '🔑', 'Cambiar su propia contraseña']];
 const ACCIONES_DEFAULT_ROL = {
   admin: {

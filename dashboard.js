@@ -34,7 +34,7 @@ function Dashboard({ notas = [], productos = [], creditos = [], clientes = [], j
     const medidorRemoto = Number(jornadaActiva?.lecturaCalculadaActual ?? jornadaActiva?.lecturaActual ?? jornadaActiva?.lecturaInicial ?? 0);
     const medidorLogico = jornadaActiva ? medidorRemoto + incrementoPendiente : null;
     return React.createElement('div', { className: 'fx-page-home fx-page-home-repartidor', style: { padding: '16px 12px' } },
-      React.createElement('div', { style: { fontSize: 20, fontWeight: 800, marginBottom: 4 } }, 'Operación de jornada'),
+      React.createElement('div', { style: { fontSize: 20, fontWeight: 800, marginBottom: 4 } }, 'Jornada'),
       React.createElement('div', { style: { fontSize: 12, color: 'var(--ink-soft)', lineHeight: 1.45, marginBottom: 14 } }, 'Lectura física solo al abrir y cerrar. Durante las ventas, el sistema mantiene el medidor lógico acumulado y calcula los litros según la configuración de la jornada.'),
       !jornadaActiva && React.createElement(Card, { style: { marginBottom: 14, background: 'var(--info-bg)', color: 'var(--info-text)' } }, React.createElement('div', { style: { fontSize: 12, fontWeight: 800, marginBottom: 5 } }, 'JORNADA NO INICIADA'), React.createElement('div', { style: { fontSize: 12, lineHeight: 1.4 } }, 'Selecciona la asignación vigente, registra la carga en litros y captura la lectura física inicial para comenzar.')),
       jornadaActiva && React.createElement(Card, { style: { marginBottom: 14 } },
@@ -54,22 +54,22 @@ function Dashboard({ notas = [], productos = [], creditos = [], clientes = [], j
   }
 
   const acciones = [
-    ['🏢', 'Asignaciones / Localidades', 'Relacionar localidad, repartidor, vehículo y medidor', 'jerarquia'],
-    ['🚚', 'Repartidores y operación', 'Consultar cargas y jornadas por localidad', 'repartidores'],
-    ['👥', 'Clientes fijos', 'Consultar clientes y su localidad asignada', 'clientes'],
-    ['📏', 'Medición y tarifas', 'Configurar litros, contador físico y precio', 'config'],
-    ['📦', 'Inventario operativo', 'Consultar existencias y movimientos reales', 'inventario'],
-    ['💳', 'Créditos y abonos', 'Consultar saldos y pagos registrados', 'creditos'],
+    ['🏢', 'Cobertura', 'Relacionar localidad, repartidor, vehículo y medidor', 'jerarquia'],
+    ['🚚', 'Operación', 'Consultar cargas y jornadas por localidad', 'repartidores'],
+    ['👥', 'Clientes', 'Consultar clientes y su localidad asignada', 'clientes'],
+    ['📏', 'Medición', 'Configurar litros, contador físico y precio', 'config'],
+    ['📦', 'Inventario', 'Consultar existencias y movimientos reales', 'inventario'],
+    ['💳', 'Créditos', 'Consultar saldos y pagos registrados', 'creditos'],
     ['💰', 'Caja', 'Revisar efectivo esperado y cierres', 'gerencia'],
-    ['📈', 'Reportes y conciliación', 'Exportar ventas, litros y diferencias', 'reportes']
+    ['📈', 'Reportes', 'Exportar ventas, litros y diferencias', 'reportes']
   ];
   return React.createElement('div', { className: 'fx-page-home', style: { padding: '16px 12px' } },
-    React.createElement('div', { style: { fontSize: 20, fontWeight: 800, marginBottom: 4 } }, 'Inicio administrativo'),
+    React.createElement('div', { style: { fontSize: 20, fontWeight: 800, marginBottom: 4 } }, 'Inicio'),
     React.createElement('div', { style: { fontSize: 12, color: 'var(--ink-soft)', lineHeight: 1.45, marginBottom: 14 } }, 'Supervisión de distribución, medición, ventas, caja, inventario y conciliación.'),
     React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 } },
       React.createElement(StatTile, { value: ventasHoy.length, label: 'Ventas de hoy', bg: 'var(--rail)', color: 'var(--rail-ink)', onClick: irA('reportes') }),
       React.createElement(StatTile, { value: fmt(ingresosHoy), label: 'Ingresos de hoy', bg: 'var(--accent)', color: 'var(--accent-ink)', onClick: irA('gerencia') }),
-      React.createElement(StatTile, { value: clientesActivos, label: 'Clientes fijos activos', bg: 'var(--info)', color: '#fff', onClick: irA('clientes') }),
+      React.createElement(StatTile, { value: clientesActivos, label: 'Clientes activos', bg: 'var(--info)', color: '#fff', onClick: irA('clientes') }),
       React.createElement(StatTile, { value: fmt(creditosPendientes), label: 'Crédito pendiente', bg: 'var(--warn)', color: '#fff', onClick: irA('creditos') })),
-    React.createElement(Card, null, React.createElement('div', { style: { fontSize: 13, fontWeight: 800, marginBottom: 4, fontFamily: 'var(--font-display)', textTransform: 'uppercase' } }, 'Acciones del núcleo operativo'), React.createElement('div', { style: { fontSize: 11, color: 'var(--ink-faint)', marginBottom: 12 } }, 'Cada acceso corresponde a una relación real del sistema de agua medida.'), React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 } }, acciones.filter(a => a[3] !== 'config' || isAdmin).map(([icono, titulo, detalle, tab]) => React.createElement('button', { className: 'fx-action-entry', key: tab, onClick: irA(tab), style: { background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 6, padding: '12px 9px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'pointer', minHeight: 104 } }, React.createElement('span', { style: { fontSize: 22 } }, icono), React.createElement('span', { style: { fontSize: 12, fontWeight: 700, textAlign: 'center', color: 'var(--ink)' } }, titulo), React.createElement('span', { style: { fontSize: 10, lineHeight: 1.25, textAlign: 'center', color: 'var(--ink-faint)' } }, detalle))))));
+    React.createElement(Card, null, React.createElement('div', { style: { fontSize: 13, fontWeight: 800, marginBottom: 4, fontFamily: 'var(--font-display)', textTransform: 'uppercase' } }, 'Módulos'), React.createElement('div', { style: { fontSize: 11, color: 'var(--ink-faint)', marginBottom: 12 } }, 'Cada acceso corresponde a una relación real del sistema de agua medida.'), React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 } }, acciones.filter(a => a[3] !== 'config' || isAdmin).map(([icono, titulo, detalle, tab]) => React.createElement('button', { className: 'fx-action-entry', key: tab, onClick: irA(tab), style: { background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 6, padding: '12px 9px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'pointer', minHeight: 104 } }, React.createElement('span', { style: { fontSize: 22 } }, icono), React.createElement('span', { style: { fontSize: 12, fontWeight: 700, textAlign: 'center', color: 'var(--ink)' } }, titulo), React.createElement('span', { style: { fontSize: 10, lineHeight: 1.25, textAlign: 'center', color: 'var(--ink-faint)' } }, detalle))))));
 }

@@ -273,7 +273,7 @@ function CargasPanel({ clientes = [], localidades = [], jornadas = [], cargasAgu
   const localidadesActivas = (localidades || []).filter(localidad => localidad.activo !== false);
   const numero = valor => Number(valor || 0).toFixed(2);
   return React.createElement('div', { style: { padding: '16px 12px', color: 'var(--ink)' } },
-    React.createElement('div', { style: { fontSize: 21, fontWeight: 800, marginBottom: 4 } }, 'Cargas y jornadas'),
+    React.createElement('div', { style: { fontSize: 21, fontWeight: 800, marginBottom: 4 } }, 'Jornadas'),
     React.createElement('div', { style: { color: 'var(--ink-soft)', fontSize: 12, lineHeight: 1.45, marginBottom: 14 } }, 'Supervisa la carga de agua y la jornada vinculada a cada localidad. Las ventas, lecturas y conciliaciones se registran en el flujo operativo.'),
     localidadesActivas.map(localidad => {
       const jornada = (jornadas || []).find(item => item.estado === 'abierta' && item.localidadId === localidad.id);

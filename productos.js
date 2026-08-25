@@ -218,7 +218,7 @@ function Productos({
       fontSize: 20,
       fontWeight: 800
     }
-  }, "📦 Productos"), React.createElement(Row, {
+  }, "Catálogo"), React.createElement(Row, {
     style: {
       gap: 6
     }

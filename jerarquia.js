@@ -141,7 +141,7 @@ function JerarquiaPanel({ clientes = [], localidades = [], vehiculos = [], medid
 
   return React.createElement('div', { className: 'fx-page-hierarchy', style: { padding: '14px 12px 28px' } },
     React.createElement('div', { style: { marginBottom: 16 } },
-      React.createElement('div', { style: { fontSize: 21, fontWeight: 800 } }, 'Localidades operativas'),
+      React.createElement('div', { style: { fontSize: 21, fontWeight: 800 } }, 'Cobertura'),
       React.createElement('div', { style: { fontSize: 12, color: 'var(--ink-soft)', marginTop: 4, lineHeight: 1.45 } }, 'Cada cliente fijo pertenece a una localidad. Cada localidad se asigna a un solo repartidor y conserva su vehículo y medidor de operación.')
     ),
     mensaje && React.createElement('div', { style: { background: 'var(--ok-bg)', color: 'var(--ok-text)', borderRadius: 9, padding: '10px 12px', fontSize: 12, fontWeight: 700, marginBottom: 12 } }, mensaje),

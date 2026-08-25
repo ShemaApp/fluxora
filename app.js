@@ -19,7 +19,7 @@ function App() {
   }, []);
   const esAdmin = currentUser?.role === 'admin';
   const esRepartidor = currentUser?.role === 'repartidor';
-  const ALL_TABS = [['home', '🏠', 'Inicio'], ['clientes', '👥', 'Clientes fijos'], ['creditos', '💳', 'Créditos / Abonos'], ['ruta', '🚚', esRepartidor ? 'Mi Ruta' : 'Cargas y Jornadas'], ['jornada', '⏱', esRepartidor ? 'Mi Jornada' : 'Conciliaciones'], ['repartidores', '🧭', 'Repartidores / Cargas'], ['productos', '📦', 'Productos / Tarifas'], ['inventario', '📋', 'Inventario de agua'], ['reportes', '📈', 'Reportes operativos'], ['gerencia', '💰', 'Caja'], ['jerarquia', '🏢', 'Asignaciones / Localidades'], ['privacidad', '🛡️', 'Privacidad']];
+  const ALL_TABS = [['home', '🏠', 'Inicio'], ['clientes', '👥', 'Clientes'], ['creditos', '💳', 'Créditos'], ['ruta', '🚚', esRepartidor ? 'Operación' : 'Jornadas'], ['jornada', '⏱', esRepartidor ? 'Jornadas' : 'Control'], ['repartidores', '🧭', 'Operación'], ['productos', '📦', 'Catálogo'], ['inventario', '📋', 'Inventario'], ['reportes', '📈', 'Reportes'], ['gerencia', '💰', 'Caja'], ['jerarquia', '🏢', 'Cobertura'], ['privacidad', '🛡️', 'Privacidad']];
   const permTabs = permisoTabs(currentUser);
   const tabsPermitidos = esRepartidor ? ['home', 'ruta', 'jornada'] : ['home', 'privacidad', ...ALL_TABS.filter(([id]) => id !== 'home' && id !== 'privacidad' && permTabs[id]).map(([id]) => id)];
   const TABS = ALL_TABS.filter(([id]) => tabsPermitidos.includes(id));
