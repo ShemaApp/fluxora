@@ -245,7 +245,7 @@ function FlujoChoferRapido({
   );
 }
 
-function CargasPanel({ clientes = [], localidades = [], jornadas = [], vehiculos = [], medidores = [], currentUser = {} }) {
+function CargasPanel({ clientes = [], localidades = [], jornadas = [], cargasAgua = [], vehiculos = [], medidores = [], currentUser = {} }) {
   if (currentUser.role !== 'admin') return null;
   const localidadesActivas = (localidades || []).filter(localidad => localidad.activo !== false);
   const numero = valor => Number(valor || 0).toFixed(2);
@@ -257,11 +257,13 @@ function CargasPanel({ clientes = [], localidades = [], jornadas = [], vehiculos
       const clientesLocalidad = (clientes || []).filter(cliente => cliente.localidadId === localidad.id).length;
       const vehiculo = localidad.vehiculoNombre || localidad.vehiculoId || 'Sin vehículo';
       const medidor = localidad.medidorNombre || localidad.medidorId || 'Sin medidor';
+      const cargasJornada = jornada ? (cargasAgua || []).filter(carga => carga.jornadaId === jornada.id) : [];
+      const litrosCargadosHistorial = cargasJornada.reduce((total, carga) => total + Number(carga.litros || 0), 0);
       return React.createElement('div', { key: localidad.id, style: { background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, padding: 13, marginBottom: 10 } },
         React.createElement('div', { style: { fontSize: 15, fontWeight: 800 } }, localidad.nombre || localidad.id),
         React.createElement('div', { style: { fontSize: 11, color: 'var(--ink-soft)', marginTop: 4 } }, localidad.repartidorNombre || 'Sin repartidor', ' · ', clientesLocalidad, ' cliente(s) fijo(s)'),
         React.createElement('div', { style: { fontSize: 11, color: 'var(--ink-soft)', marginTop: 5 } }, 'Vehículo: ', vehiculo, ' · Medidor: ', medidor),
-        jornada ? React.createElement('div', { style: { marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--line)', fontSize: 11, color: 'var(--ok-text)', fontWeight: 700 } }, 'Jornada abierta · Carga: ', numero(jornada.aguaCargadaLitros), ' L · Disponible: ', numero(jornada.aguaDisponibleLitros), ' L · Vendido: ', numero(jornada.litrosVendidosAcumulados ?? jornada.litrosVendidos), ' L · Lectura lógica: ', numero(jornada.lecturaCalculadaActual ?? jornada.lecturaActual ?? jornada.lecturaInicial)) : React.createElement('div', { style: { marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--line)', fontSize: 11, color: 'var(--ink-faint)' } }, 'Sin jornada abierta'));
+        jornada ? React.createElement('div', { style: { marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--line)', fontSize: 11, color: 'var(--ok-text)', fontWeight: 700 } }, 'Jornada abierta · Carga acumulada: ', numero(jornada.aguaCargadaLitros), ' L · Recargas: ', numero(jornada.litrosRecargadosAcumulados || 0), ' L · Disponible: ', numero(jornada.aguaDisponibleLitros), ' L · Vendido: ', numero(jornada.litrosVendidosAcumulados ?? jornada.litrosVendidos), ' L · Lectura lógica: ', numero(jornada.lecturaCalculadaActual ?? jornada.lecturaActual ?? jornada.lecturaInicial), cargasJornada.length ? React.createElement('div', { style: { marginTop: 5, color: 'var(--ink-soft)', fontWeight: 600 } }, 'Movimientos de carga: ', cargasJornada.length, ' · Total histórico: ', numero(litrosCargadosHistorial), ' L') : null) : React.createElement('div', { style: { marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--line)', fontSize: 11, color: 'var(--ink-faint)' } }, 'Sin jornada abierta'));
     }),
     localidadesActivas.length === 0 ? React.createElement('div', { style: { color: 'var(--ink-faint)', fontSize: 12, textAlign: 'center', padding: 24 } }, 'No hay localidades activas.') : null);
 }

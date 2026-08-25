@@ -15,6 +15,7 @@ function useSesion() {
   const [notas, setNotas] = useState([]);
   const [creditos, setCreditos] = useState([]);
   const [jornadas, setJornadas] = useState([]);
+  const [cargasAgua, setCargasAgua] = useState([]);
   const [medicion, setMedicion] = useState(null);
   const [tarifas, setTarifas] = useState([]);
   const [vehiculos, setVehiculos] = useState([]);
@@ -26,6 +27,7 @@ function useSesion() {
     notas: 0,
     creditos: 0,
     jornadas: 0,
+    cargasAgua: 0,
     tarifas: 0,
     vehiculos: 0,
     medidores: 0
@@ -131,6 +133,11 @@ function useSesion() {
       : currentUser.role === 'admin'
         ? db.collection(COLECCIONES.JORNADAS).orderBy('fechaInicio', 'desc').limit(200)
         : null;
+    const cargasAguaQuery = currentUser.role === 'repartidor'
+      ? db.collection(COLECCIONES.CARGAS_AGUA).where('repartidorId', '==', currentUser.uid).limit(300)
+      : currentUser.role === 'admin'
+        ? db.collection(COLECCIONES.CARGAS_AGUA).orderBy('fechaHora', 'desc').limit(300)
+        : null;
     const unsubs = [db.collection('_meta').doc('medicion_venta').onSnapshot(snap => {
       setMedicion(snap.exists ? { id: snap.id, ...snap.data() } : null);
     }, errorHandler), db.collection(COLECCIONES.TARIFAS).onSnapshot({
@@ -193,7 +200,14 @@ function useSesion() {
       lista.sort((a, b) => new Date(b.fechaInicio || 0) - new Date(a.fechaInicio || 0));
       setJornadas(lista);
       pend('jornadas', snap);
-    }, errorHandler)] : [() => setJornadas([])])];
+    }, errorHandler)] : [() => setJornadas([])]), ...(cargasAguaQuery ? [cargasAguaQuery.onSnapshot({
+      includeMetadataChanges: true
+    }, snap => {
+      const lista = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      lista.sort((a, b) => new Date(b.fechaHora || 0) - new Date(a.fechaHora || 0));
+      setCargasAgua(lista);
+      pend('cargasAgua', snap);
+    }, errorHandler)] : [() => setCargasAgua([])])];
     return () => unsubs.forEach(u => u());
   }, [currentUser]);
 
@@ -247,7 +261,7 @@ function useSesion() {
     currentUser, authChecked, firestoreError,
     locked, setLocked,
     isOnline,
-    productos, clientes, localidades, notas, creditos, jornadas, medicion, tarifas, vehiculos, medidores,
+    productos, clientes, localidades, notas, creditos, jornadas, cargasAgua, medicion, tarifas, vehiculos, medidores,
     pendCounts, totalPendientes,
   };
 }

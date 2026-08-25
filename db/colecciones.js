@@ -11,6 +11,7 @@ const COLECCIONES = {
   NOTAS: 'notas',
   CREDITOS: 'creditos',
   JORNADAS: 'jornadas',
+  CARGAS_AGUA: 'cargas_agua',
   LECTURAS_MEDIDOR: 'lecturas_medidor',
   USUARIOS: 'usuarios',
   TARIFAS: 'tarifas',

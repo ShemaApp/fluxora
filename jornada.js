@@ -1,7 +1,7 @@
 /* jornada.js — Jornada y medidor.
    La localidad es la unidad operativa; vehículo y medidor llegan como
    referencias separadas desde su asignación administrativa. */
-function JornadaMedidor({ localidades = [], jornadas = [], notas = [], clientes = [], medicion = null, vehiculos = [], medidores = [], currentUser = {}, onIrA }) {
+function JornadaMedidor({ localidades = [], jornadas = [], notas = [], clientes = [], cargasAgua = [], medicion = null, vehiculos = [], medidores = [], currentUser = {}, onIrA }) {
   const localidadesDisponibles = obtenerLocalidadesAsignadas({ localidades, currentUser, localidadIds: currentUser.localidadIds });
   const jornadaAbierta = (jornadas || []).find(j => j.estado === 'abierta' && (currentUser.role === 'admin' || j.repartidorId === currentUser.uid));
   const [form, setForm] = useState(() => {
@@ -9,6 +9,8 @@ function JornadaMedidor({ localidades = [], jornadas = [], notas = [], clientes 
     return borrador?.form || { localidadId: '', localidadNombre: '', vehiculoId: '', vehiculo: '', vehiculoNombre: '', medidorId: '', medidorNombre: '', lecturaInicial: '', aguaCargadaLitros: '' };
   });
   const [lecturaFinal, setLecturaFinal] = useState('');
+  const [recargaLitros, setRecargaLitros] = useState('');
+  const [recargando, setRecargando] = useState(false);
   const [mensaje, setMensaje] = useState('');
   const localidadActual = localidadesDisponibles.find(l => l.id === form.localidadId) || buscarLocalidadOperativa({ localidades: localidadesDisponibles, localidadId: form.localidadId, localidadNombre: form.localidadNombre });
   const vehiculoActual = resolverVehiculoOperativo({ jornada: form, localidad: localidadActual, vehiculos });
@@ -41,12 +43,34 @@ function JornadaMedidor({ localidades = [], jornadas = [], notas = [], clientes 
     return (localidadId && String(c.localidadId || '') === String(localidadId)) || (!c.localidadId && localidadNombre && String(c.localidadNombre || c.localidad || c.domicilio || '').trim().toLowerCase() === String(localidadNombre).trim().toLowerCase());
   });
   const clientesAtendidos = new Set((notas || []).filter(n => jornadaAbierta && n.capturadoPorUid === jornadaAbierta.repartidorId && new Date(n.fecha || 0).getTime() >= new Date(jornadaAbierta.fechaInicio || 0).getTime()).map(n => n.clienteId));
+  const cargasJornada = (cargasAgua || []).filter(carga => jornadaAbierta && carga.jornadaId === jornadaAbierta.id);
+  const litrosRecargadosJornada = cargasJornada.filter(carga => carga.tipo === 'recarga').reduce((total, carga) => total + Number(carga.litros || 0), 0);
   const flash = texto => { setMensaje(texto); setTimeout(() => setMensaje(''), 3000); };
 
   useEffect(() => {
     if (typeof appWriteDraft === 'function') appWriteDraft('jornada', currentUser?.uid, { form });
   }, [form, currentUser?.uid]);
 
+  const recargar = async () => {
+    const litros = Number(recargaLitros);
+    if (!jornadaAbierta) return flash('Primero inicia una jornada');
+    if (currentUser.role !== 'repartidor') return flash('Solo el repartidor de la jornada puede registrar una recarga');
+    if (!Number.isFinite(litros) || litros <= 0) return flash('Captura una cantidad de litros válida');
+    const runtime = typeof window !== 'undefined' ? window : globalThis;
+    if (typeof runtime.appRegistrarRecargaAgua !== 'function') return flash('El módulo de recargas no está disponible');
+    setRecargando(true);
+    try {
+      const resultado = await runtime.appRegistrarRecargaAgua({
+        jornadaId: jornadaAbierta.id,
+        litros,
+        usuario: { uid: currentUser.uid, nombre: currentUser.nombre || '' },
+        jornadaBase: jornadaAbierta
+      });
+      setRecargaLitros('');
+      flash(resultado.estado === 'pendiente_local' ? 'Recarga guardada en el teléfono; queda pendiente de sincronizar' : `Recarga registrada: +${litros.toFixed(2)} L`);
+    } catch (e) { flash('No se pudo registrar la recarga: ' + e.message); }
+    setRecargando(false);
+  };
   const seleccionarLocalidad = id => {
     const localidad = localidadesDisponibles.find(l => l.id === id);
     const vehiculo = resolverVehiculoOperativo({ localidad, vehiculos });
@@ -81,13 +105,22 @@ function JornadaMedidor({ localidades = [], jornadas = [], notas = [], clientes 
       const jornadaRef = db.collection('jornadas').doc();
       const fechaInicio = new Date().toISOString();
       const lecturaInicialRef = db.collection('lecturas_medidor').doc(`${jornadaRef.id}-inicial`);
+      const cargaInicialRef = db.collection(COLECCIONES.CARGAS_AGUA).doc(`${jornadaRef.id}-inicial`);
       const escribirInicio = tx => {
         tx.set(jornadaRef, {
           estado: 'abierta', repartidorId: currentUser.uid, repartidorNombre: currentUser.nombre || '',
           localidadId: localidad.id, localidadNombre: localidad.nombre || '', localidad: localidad.nombre || '', vehiculo: vehiculo.nombre, vehiculoId: vehiculo.id, vehiculoNombre: vehiculo.nombre, medidorId: medidor.id, medidorNombre: medidor.nombre,
           lecturaAnterior: lecturaAnterior === null ? null : Number(lecturaAnterior), lecturaInicial: inicio, lecturaActual: inicio, lecturaCalculadaActual: inicio,
-          aguaCargadaLitros, aguaDisponibleLitros: aguaCargadaLitros, litrosMedidos: null, litrosVendidos: 0, litrosVendidosAcumulados: 0, otrasSalidasLitros: 0, diferenciaLitros: null,
+          aguaCargadaLitros, aguaDisponibleLitros: aguaCargadaLitros, litrosRecargadosAcumulados: 0, litrosMedidos: null, litrosVendidos: 0, litrosVendidosAcumulados: 0, otrasSalidasLitros: 0, diferenciaLitros: null,
           unidadComercial, litrosPorUnidad, incrementoContadorPorUnidad, precioPorUnidad, medidorDigitos: medidor.digitos, medidorLitrosPorIncremento: medidor.litrosPorIncremento, creadoOffline: typeof navigator !== 'undefined' && !navigator.onLine
+        });
+        tx.set(cargaInicialRef, {
+          jornadaId: jornadaRef.id, tipo: 'carga_inicial', litros: aguaCargadaLitros,
+          aguaDisponibleAntesLitros: 0, aguaDisponibleDespuesLitros: aguaCargadaLitros, aguaCargadaAcumuladaLitros: aguaCargadaLitros,
+          litrosRecargadosAcumulados: 0, localidadId: localidad.id, localidadNombre: localidad.nombre || '',
+          vehiculoId: vehiculo.id, vehiculoNombre: vehiculo.nombre || '', medidorId: medidor.id, medidorNombre: medidor.nombre || '',
+          jornadaEstado: 'abierta', fechaHora: fechaInicio, usuarioUid: currentUser.uid, usuarioNombre: currentUser.nombre || '',
+          repartidorId: currentUser.uid, repartidorNombre: currentUser.nombre || '', origen: 'apertura_jornada'
         });
         tx.set(lecturaInicialRef, {
           jornadaId: jornadaRef.id, tipo: 'inicial', lecturaFisica: true, valor: inicio, valorAnterior: lecturaAnterior === null ? null : Number(lecturaAnterior),
@@ -200,7 +233,14 @@ function JornadaMedidor({ localidades = [], jornadas = [], notas = [], clientes 
         React.createElement('div', { style: { height: 8, background: 'var(--line)', borderRadius: 8, overflow: 'hidden', marginTop: 7 } },
           React.createElement('div', { style: { width: `${Number(jornadaAbierta.aguaCargadaLitros || 0) > 0 ? Math.max(0, Math.min(100, Number(jornadaAbierta.aguaDisponibleLitros || 0) / Number(jornadaAbierta.aguaCargadaLitros || 1) * 100)) : 0}%`, height: '100%', background: 'var(--accent)' } })
         ),
-        React.createElement('div', { style: { fontSize: 10, color: 'var(--ink-soft)', marginTop: 5 } }, 'Carga inicial: ', Number(jornadaAbierta.aguaCargadaLitros || 0).toFixed(2), ' L · Lectura calculada: ', Number(jornadaAbierta.lecturaCalculadaActual ?? jornadaAbierta.lecturaActual ?? jornadaAbierta.lecturaInicial).toFixed(2), ' contador')
+        React.createElement('div', { style: { fontSize: 10, color: 'var(--ink-soft)', marginTop: 5 } }, 'Carga acumulada: ', Number(jornadaAbierta.aguaCargadaLitros || 0).toFixed(2), ' L · Recargas: ', litrosRecargadosJornada.toFixed(2), ' L · Lectura calculada: ', Number(jornadaAbierta.lecturaCalculadaActual ?? jornadaAbierta.lecturaActual ?? jornadaAbierta.lecturaInicial).toFixed(2), ' contador')
+      ),
+      currentUser.role === 'repartidor' && React.createElement('div', { className: 'fx-recharge-panel', style: { background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 9, padding: 10, marginBottom: 10 } },
+        React.createElement('div', { style: { fontSize: 11, fontWeight: 800, marginBottom: 4 } }, 'RECARGA ADICIONAL'),
+        React.createElement('div', { style: { color: 'var(--ink-soft)', fontSize: 10, lineHeight: 1.4, marginBottom: 7 } }, 'Aumenta el agua disponible del mismo vehículo y jornada. No modifica el medidor físico ni la lectura lógica.'),
+        React.createElement('div', { className: 'fx-recharge-controls', style: { display: 'flex', gap: 8, alignItems: 'stretch' } },
+          React.createElement('input', { value: recargaLitros, onChange: e => setRecargaLitros(e.target.value), inputMode: 'decimal', type: 'number', min: 0.01, step: 0.01, placeholder: 'Litros a agregar', 'aria-label': 'Litros de recarga adicional', style: { flex: 1, minWidth: 0, padding: 10, boxSizing: 'border-box', borderRadius: 8, border: '1px solid var(--line-strong)', background: 'var(--surface)', color: 'var(--ink)' } }),
+          React.createElement('button', { onClick: recargar, disabled: recargando, style: { flex: '0 0 auto', border: 0, borderRadius: 8, padding: '10px 13px', background: 'var(--accent)', color: 'var(--ink)', fontWeight: 800, cursor: recargando ? 'wait' : 'pointer' } }, recargando ? 'Guardando…' : 'Agregar litros'))
       ),
       React.createElement('input', { value: lecturaFinal, onChange: e => setLecturaFinal(e.target.value), inputMode: 'decimal', placeholder: 'Lectura final del medidor', style: { width: '100%', padding: 12, boxSizing: 'border-box', borderRadius: 9, border: '1px solid var(--line-strong)', background: 'var(--surface)', color: 'var(--ink)', marginBottom: 10 } }),
       React.createElement('button', { onClick: cerrar, style: { width: '100%', padding: 14, border: 0, borderRadius: 9, background: 'var(--accent)', color: 'var(--ink)', fontWeight: 800 } }, 'Cerrar jornada y conciliar'),

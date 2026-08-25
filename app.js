@@ -3,7 +3,7 @@ function App() {
     currentUser, authChecked, firestoreError,
     locked, setLocked,
     isOnline,
-    productos, clientes, localidades, notas, creditos, jornadas, medicion, tarifas, vehiculos, medidores,
+    productos, clientes, localidades, notas, creditos, jornadas, cargasAgua, medicion, tarifas, vehiculos, medidores,
     pendCounts, totalPendientes,
   } = useSesion();
   const [tab, setTab] = useState('home');

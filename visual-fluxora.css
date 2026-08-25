@@ -815,3 +815,21 @@ body::before {
     padding: 11px;
   }
 }
+
+/* Recarga de agua: control táctil y adaptable en el flujo de jornada. */
+.fx-recharge-controls > input,
+.fx-recharge-controls > button {
+  min-height: 42px;
+}
+
+@media (max-width: 480px) {
+  .fx-recharge-controls {
+    flex-wrap: wrap;
+  }
+
+  .fx-recharge-controls > input,
+  .fx-recharge-controls > button {
+    flex: 1 1 100% !important;
+    width: 100%;
+  }
+}
