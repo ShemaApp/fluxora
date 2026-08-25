@@ -12,7 +12,7 @@ function InventarioHistorial({
     return unsub;
   }, []);
   return React.createElement(Modal, {
-    title: "📋 Historial de inventario",
+    title: "Historial de inventario",
     onClose: onClose
   }, React.createElement("div", {
     style: {
@@ -205,10 +205,12 @@ function Productos({
     setSaving(false);
   };
   return React.createElement("div", {
+    className: 'fx-page-catalog',
     style: {
       padding: '16px 12px'
     }
   }, React.createElement(Row, {
+    className: 'fx-catalog-heading',
     style: {
       justifyContent: 'space-between',
       marginBottom: 12
@@ -219,12 +221,13 @@ function Productos({
       fontWeight: 800
     }
   }, "Catálogo"), React.createElement(Row, {
+    className: 'fx-catalog-actions',
     style: {
       gap: 6
     }
   }, isAdmin && React.createElement(BOut, {
     onClick: () => setHistOpen(true)
-  }, "📋 Historial"), puedeEditar && React.createElement(BFill, {
+  }, "Historial"), puedeEditar && React.createElement(BFill, {
     onClick: () => setForm({
       nombre: '',
       precio: '',
@@ -234,19 +237,22 @@ function Productos({
       motivo: ''
     })
   }, "+ Nuevo"))), React.createElement(Inp, {
-    placeholder: "🔍 Buscar...",
+    className: 'fx-catalog-search',
+    placeholder: "Buscar por nombre…",
     value: q,
     onChange: e => setQ(e.target.value),
     style: {
       marginBottom: 10
     }
   }), React.createElement("div", {
+    className: 'fx-catalog-helper',
     style: {
       fontSize: 11,
       color: 'var(--ink-faint)',
       marginBottom: 10
     }
   }, "Mantén presionado un producto para editar, eliminar o seleccionar."), selMode && React.createElement(Row, {
+    className: 'fx-catalog-selection-bar',
     style: {
       marginBottom: 10,
       background: 'var(--danger-bg)',
@@ -259,12 +265,13 @@ function Productos({
       fontSize: 13,
       color: 'var(--danger-text)'
     }
-  }, sel.length, " seleccionado(s)"), React.createElement(BOut, {
+  }, sel.length, " seleccionados"), React.createElement(BOut, {
     onClick: delSel,
     color: "var(--danger-text)"
-  }, "🗑 Eliminar"), React.createElement(BOut, {
+  }, "Eliminar"), React.createElement(BOut, {
     onClick: salirSeleccion
   }, "Cancelar")), selMode && React.createElement(Row, {
+    className: 'fx-catalog-selection-tools',
     style: {
       paddingLeft: 4,
       marginBottom: 6
@@ -287,12 +294,14 @@ function Productos({
   }, "Seleccionar todos")), list.map(p => {
     const expanded = expandedId === p.id;
     return React.createElement(Card, {
+      className: 'fx-catalog-item',
       key: p.id,
       style: {
         padding: 0,
         overflow: 'hidden'
       }
     }, React.createElement("div", {
+      className: 'fx-catalog-item-summary',
       onMouseDown: () => startPress(p.id),
       onMouseUp: cancelPress,
       onMouseLeave: cancelPress,
@@ -350,6 +359,7 @@ function Productos({
         marginTop: 3
       }
     }, "🏷️ ", p.codigoBarras))), React.createElement("div", {
+      className: 'fx-catalog-item-actions',
       style: {
         maxHeight: expanded ? 120 : 0,
         overflow: 'hidden',
@@ -375,12 +385,12 @@ function Productos({
       style: {
         flex: 1
       }
-    }, "✏️ Editar"), isAdmin && React.createElement(BOut, {
+    }, "Editar"), isAdmin && React.createElement(BOut, {
       onClick: () => entrarSeleccion(p.id),
       style: {
         flex: 1
       }
-    }, "☑️ Seleccionar"), isAdmin && React.createElement(BOut, {
+    }, "Seleccionar"), isAdmin && React.createElement(BOut, {
       onClick: () => {
         if (window.confirm(`¿Eliminar "${p.nombre}"? Esta acción no se puede deshacer.`)) db.collection('productos').doc(p.id).delete();
         setExpandedId(null);
@@ -389,7 +399,7 @@ function Productos({
       style: {
         flex: 1
       }
-    }, "🗑️ Eliminar"))));
+    }, "Eliminar"))));
   }), form && React.createElement(Modal, {
     title: form.id ? 'Editar Producto' : 'Nuevo Producto',
     onClose: () => setForm(null)
@@ -476,7 +486,7 @@ function Productos({
       width: '100%'
     },
     disabled: saving
-  }, saving ? 'Guardando…' : '💾 Guardar')), histOpen && React.createElement(InventarioHistorial, {
+  }, saving ? 'Guardando…' : 'Guardar')), histOpen && React.createElement(InventarioHistorial, {
     onClose: () => setHistOpen(false)
   }));
 }

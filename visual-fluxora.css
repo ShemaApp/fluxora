@@ -1713,3 +1713,282 @@ body::before { display: none !important; }
   .fx-operacion-water > div:last-child { grid-template-columns: 1fr 1fr !important; }
   .fx-operacion-assignment { grid-template-columns: minmax(0, 1fr) auto !important; }
 }
+
+
+/* Iteración 28 — Catálogo y Precios: datos antes que decoración. */
+.fx-page-catalog,
+.fx-page-pricing {
+  max-width: 980px !important;
+  padding: 10px 0 24px !important;
+}
+.fx-catalog-heading {
+  align-items: center !important;
+  margin-bottom: 12px !important;
+}
+.fx-catalog-heading > div:first-child,
+.fx-pricing-title {
+  color: var(--fx-navy) !important;
+  font-size: 22px !important;
+  font-weight: 800 !important;
+  letter-spacing: -.02em !important;
+}
+.fx-catalog-actions {
+  gap: 5px !important;
+}
+.fx-catalog-actions > button {
+  min-height: 34px !important;
+  padding: 7px 10px !important;
+  border-radius: 4px !important;
+  font-size: 10px !important;
+}
+.fx-catalog-search {
+  min-height: 42px !important;
+  margin-bottom: 8px !important;
+  border-radius: 4px !important;
+}
+.fx-catalog-helper {
+  margin: 0 2px 8px !important;
+  font-size: 10px !important;
+  line-height: 1.3 !important;
+}
+.fx-catalog-selection-bar {
+  min-height: 38px !important;
+  margin: 0 0 5px !important;
+  padding: 7px 0 !important;
+  background: transparent !important;
+  border-top: 1px solid var(--fx-line) !important;
+  border-bottom: 1px solid var(--fx-line) !important;
+  border-radius: 0 !important;
+}
+.fx-catalog-selection-bar > span {
+  color: var(--fx-ink-soft) !important;
+  font-size: 10px !important;
+}
+.fx-catalog-selection-bar > button,
+.fx-catalog-selection-tools button {
+  min-height: 30px !important;
+  border-radius: 4px !important;
+  font-size: 10px !important;
+}
+.fx-catalog-selection-tools {
+  margin: 0 0 2px !important;
+  padding: 2px 0 !important;
+}
+.fx-catalog-selection-tools span {
+  font-size: 10px !important;
+}
+.fx-catalog-item {
+  padding: 0 !important;
+  overflow: visible !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--fx-line) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.fx-catalog-item-summary {
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 10px 4px !important;
+  background: transparent !important;
+}
+.fx-catalog-item-summary:hover,
+.fx-catalog-item-summary:focus-visible {
+  background: var(--fx-surface-soft) !important;
+}
+.fx-catalog-item-summary > div {
+  min-width: 0 !important;
+}
+.fx-catalog-item-summary > div > div:first-child {
+  align-items: baseline !important;
+}
+.fx-catalog-item-summary > div > div:first-child > span:first-child {
+  color: var(--fx-ink) !important;
+  font-size: 13px !important;
+}
+.fx-catalog-item-summary > div > div:first-child > span:last-child {
+  color: var(--fx-navy) !important;
+  font-size: 13px !important;
+}
+.fx-catalog-item-summary > div > div:nth-child(2) {
+  margin-top: 3px !important;
+}
+.fx-catalog-item-summary > div > div:nth-child(2) span {
+  border-radius: 3px !important;
+  padding: 2px 5px !important;
+  font-size: 9px !important;
+}
+.fx-catalog-item-summary > div > div:last-child {
+  margin-top: 2px !important;
+  font-size: 9px !important;
+}
+.fx-catalog-item-actions {
+  max-height: none !important;
+  background: var(--fx-surface-soft) !important;
+  border-top: 1px solid var(--fx-line) !important;
+}
+.fx-catalog-item-actions > div {
+  gap: 5px !important;
+  padding: 7px 4px 8px !important;
+}
+.fx-catalog-item-actions > div > button {
+  min-height: 32px !important;
+  border-radius: 4px !important;
+  font-size: 10px !important;
+}
+.fx-pricing-intro {
+  margin-bottom: 10px !important;
+  font-size: 10px !important;
+  line-height: 1.35 !important;
+}
+.fx-pricing-section {
+  background: transparent !important;
+  border: 0 !important;
+  border-top: 1px solid var(--fx-line) !important;
+  border-radius: 0 !important;
+  padding: 12px 0 !important;
+  margin: 0 !important;
+}
+.fx-pricing-section > h3,
+.fx-pricing-section-heading > h3 {
+  color: var(--fx-navy) !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  letter-spacing: .01em !important;
+}
+.fx-pricing-section > label,
+.fx-pricing-form label {
+  color: var(--fx-ink-soft) !important;
+  font-size: 10px !important;
+}
+.fx-pricing-section > label input,
+.fx-pricing-section > label select,
+.fx-pricing-form input,
+.fx-pricing-form select {
+  min-height: 36px !important;
+  border-radius: 4px !important;
+  border-color: var(--fx-line) !important;
+  background: var(--fx-surface) !important;
+  font-size: 12px !important;
+}
+.fx-pricing-commercial,
+.fx-pricing-meter {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 7px 10px !important;
+}
+.fx-pricing-commercial > h3,
+.fx-pricing-meter > h3 {
+  grid-column: 1 / -1 !important;
+}
+.fx-pricing-commercial > label:last-child,
+.fx-pricing-meter > label:last-child {
+  grid-column: 1 / -1 !important;
+}
+.fx-pricing-physical-conversion,
+.fx-pricing-volume-conversion {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  gap: 8px 12px !important;
+}
+.fx-pricing-physical-conversion > h3,
+.fx-pricing-volume-conversion > h3 {
+  grid-column: 1 / -1 !important;
+}
+.fx-pricing-physical-conversion > label {
+  grid-column: 1 !important;
+}
+.fx-pricing-physical-conversion > div {
+  grid-column: 2 !important;
+  align-self: end !important;
+  margin-top: 0 !important;
+  color: var(--fx-ink) !important;
+  font-size: 12px !important;
+  line-height: 1.35 !important;
+}
+.fx-pricing-volume-conversion > div:first-of-type {
+  grid-column: 1 / -1 !important;
+  font-size: 13px !important;
+  line-height: 1.45 !important;
+}
+.fx-pricing-volume-conversion > div:last-child {
+  display: none !important;
+}
+.fx-pricing-section-heading {
+  margin-bottom: 4px !important;
+}
+.fx-pricing-section-heading > button {
+  min-height: 32px !important;
+  border-radius: 4px !important;
+  padding: 7px 10px !important;
+  font-size: 10px !important;
+}
+.fx-pricing-helper {
+  margin-bottom: 8px !important;
+  font-size: 10px !important;
+}
+.fx-pricing-form {
+  background: var(--fx-surface-soft) !important;
+  border-top: 1px solid var(--fx-line) !important;
+  border-bottom: 1px solid var(--fx-line) !important;
+  border-radius: 0 !important;
+  padding: 10px 0 !important;
+}
+.fx-pricing-form > div:last-child {
+  gap: 5px !important;
+}
+.fx-pricing-form button {
+  min-height: 34px !important;
+  border-radius: 4px !important;
+  font-size: 10px !important;
+}
+.fx-pricing-row {
+  padding: 9px 0 !important;
+  border-top-color: var(--fx-line) !important;
+}
+.fx-pricing-row > div:first-child > strong {
+  color: var(--fx-ink) !important;
+  font-size: 12px !important;
+}
+.fx-pricing-row > div:first-child > div {
+  color: var(--fx-ink-soft) !important;
+  font-size: 10px !important;
+  line-height: 1.35 !important;
+}
+.fx-pricing-row > div:last-child {
+  gap: 5px !important;
+}
+.fx-pricing-row > div:last-child > button {
+  min-height: 30px !important;
+  padding: 6px 8px !important;
+  border-radius: 4px !important;
+  font-size: 10px !important;
+}
+.fx-page-pricing > button:last-child {
+  min-height: 38px !important;
+  margin-top: 10px !important;
+  border-radius: 4px !important;
+  font-size: 12px !important;
+}
+
+@media (max-width: 767px) {
+  .fx-page-catalog,
+  .fx-page-pricing { padding: 8px 0 20px !important; }
+  .fx-catalog-heading { align-items: flex-start !important; }
+  .fx-catalog-heading > div:first-child,
+  .fx-pricing-title { font-size: 21px !important; }
+  .fx-catalog-actions { flex-wrap: wrap !important; justify-content: flex-end !important; }
+  .fx-catalog-actions > button { min-height: 32px !important; }
+  .fx-pricing-commercial,
+  .fx-pricing-meter { grid-template-columns: 1fr 1fr !important; }
+  .fx-pricing-commercial > label:first-of-type,
+  .fx-pricing-meter > label:first-of-type { grid-column: 1 / -1 !important; }
+  .fx-pricing-physical-conversion,
+  .fx-pricing-volume-conversion { grid-template-columns: 1fr !important; }
+  .fx-pricing-physical-conversion > label,
+  .fx-pricing-physical-conversion > div,
+  .fx-pricing-volume-conversion > div:first-of-type { grid-column: 1 !important; }
+  .fx-pricing-physical-conversion > div { justify-self: start !important; }
+  .fx-pricing-row { align-items: flex-start !important; }
+  .fx-pricing-row > div:last-child { flex-wrap: wrap !important; justify-content: flex-end !important; }
+}
