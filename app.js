@@ -157,7 +157,7 @@ function App() {
       textTransform: 'uppercase',
       letterSpacing: '.02em'
     }
-  }, `${NEGOCIO.emoji} ${NEGOCIO.nombre}`)), React.createElement(Row, {
+  }, NEGOCIO.nombre)), React.createElement(Row, {
     style: {
       gap: 6
     }

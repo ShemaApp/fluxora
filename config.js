@@ -197,7 +197,7 @@ function Configuracion({
       fontSize: 20,
       fontWeight: 800
     }
-  }, "⚙️ Configuración")), msg && React.createElement("div", {
+  }, "Configuración")), msg && React.createElement("div", {
     style: {
       background: 'var(--ok-bg)',
       borderRadius: 8,
@@ -221,7 +221,7 @@ function Configuracion({
       marginBottom: 16,
       flexWrap: 'wrap'
     }
-  }, [['perfil', '👤 Perfil'], ...(permisoAcciones(currentUser).password ? [['password', '🔑 Contraseña']] : []), ['pin', '🔒 PIN'], ['privacidad', '🛡️ Privacidad'], ...(isAdmin ? [['usuarios', '👥 Usuarios'], ['permisos', '🔐 Permisos'], ['medicion', '📏 Medición y Venta'], ['flota', '🚚 Vehículos / Medidores']] : [])].map(([v, l]) => React.createElement("button", {
+  }, [['perfil', 'Perfil'], ...(permisoAcciones(currentUser).password ? [['password', 'Contraseña']] : []), ['pin', 'PIN'], ['privacidad', 'Privacidad'], ...(isAdmin ? [['usuarios', 'Usuarios'], ['permisos', 'Permisos'], ['medicion', 'Medición y Venta'], ['flota', 'Vehículos / Medidores']] : [])].map(([v, l]) => React.createElement("button", {
     key: v,
     onClick: () => {
       setSub(v);
@@ -359,7 +359,7 @@ function Configuracion({
       fontWeight: 800,
       marginBottom: 6
     }
-  }, "🛡️ Privacidad y uso seguro"), React.createElement("div", {
+  }, "Privacidad y uso seguro"), React.createElement("div", {
     style: {
       fontSize: 12,
       color: 'var(--ink-soft)',
@@ -382,7 +382,7 @@ function Configuracion({
       fontSize: 13,
       fontWeight: 700
     }
-  }, "📄 Abrir aviso de privacidad"), React.createElement("a", {
+  }, "Abrir aviso de privacidad"), React.createElement("a", {
     href: 'confidencialidad-movil.html',
     target: '_blank',
     rel: 'noopener noreferrer',
@@ -397,7 +397,7 @@ function Configuracion({
       fontSize: 13,
       fontWeight: 700
     }
-  }, "📱 Abrir uso confidencial del equipo móvil")), sub === 'usuarios' && isAdmin && React.createElement(React.Fragment, null, React.createElement(Row, {
+  }, "Abrir uso confidencial del equipo móvil")), sub === 'usuarios' && isAdmin && React.createElement(React.Fragment, null, React.createElement(Row, {
     style: {
       justifyContent: 'flex-end',
       marginBottom: 10
