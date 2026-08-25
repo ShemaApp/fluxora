@@ -18,6 +18,8 @@
     error.__appDetalle = detalle;
     return error;
   };
+  const MAX_AGUA_JORNADA_LITROS = 5000;
+  global.APP_MAX_AGUA_JORNADA_LITROS = MAX_AGUA_JORNADA_LITROS;
   const estaEnLinea = () => typeof navigator === 'undefined' || navigator.onLine;
   const incrementoAtómico = valor => {
     const fieldValue = global.firebase?.firestore?.FieldValue;
@@ -51,6 +53,7 @@
       const recargasAntes = Number(jornada.litrosRecargadosAcumulados || 0);
       const aguaDisponibleDespues = aguaDisponibleAntes + carga.litros;
       const aguaCargadaDespues = aguaCargadaAntes + carga.litros;
+      if (aguaCargadaDespues > MAX_AGUA_JORNADA_LITROS) throw errorBloqueo(`La carga acumulada no puede superar ${MAX_AGUA_JORNADA_LITROS.toLocaleString('es-MX')} L`, { tipo: 'limite_carga_jornada', maximoLitros: MAX_AGUA_JORNADA_LITROS, cargaAcumuladaLitros: aguaCargadaAntes, litrosSolicitados: carga.litros });
       const datosCarga = {
         jornadaId: carga.jornadaId,
         tipo: carga.tipo,

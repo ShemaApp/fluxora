@@ -1,6 +1,7 @@
 /* jornada.js — Jornada y medidor.
    La localidad es la unidad operativa; vehículo y medidor llegan como
    referencias separadas desde su asignación administrativa. */
+const MAX_AGUA_JORNADA_LITROS = 5000;
 function JornadaMedidor({ localidades = [], jornadas = [], notas = [], clientes = [], cargasAgua = [], medicion = null, vehiculos = [], medidores = [], currentUser = {}, onIrA }) {
   const localidadesDisponibles = obtenerLocalidadesAsignadas({ localidades, currentUser, localidadIds: currentUser.localidadIds });
   const jornadaAbierta = (jornadas || []).find(j => j.estado === 'abierta' && (currentUser.role === 'admin' || j.repartidorId === currentUser.uid));
@@ -56,6 +57,8 @@ function JornadaMedidor({ localidades = [], jornadas = [], notas = [], clientes 
     if (!jornadaAbierta) return flash('Primero inicia una jornada');
     if (currentUser.role !== 'repartidor') return flash('Solo el repartidor de la jornada puede registrar una recarga');
     if (!Number.isFinite(litros) || litros <= 0) return flash('Captura una cantidad de litros válida');
+    const aguaCargadaActual = Number(jornadaAbierta.aguaCargadaLitros || 0);
+    if (aguaCargadaActual + litros > MAX_AGUA_JORNADA_LITROS) return flash(`La carga acumulada no puede superar ${MAX_AGUA_JORNADA_LITROS.toLocaleString('es-MX')} L`);
     const runtime = typeof window !== 'undefined' ? window : globalThis;
     if (typeof runtime.appRegistrarRecargaAgua !== 'function') return flash('El módulo de recargas no está disponible');
     setRecargando(true);
@@ -100,6 +103,7 @@ function JornadaMedidor({ localidades = [], jornadas = [], notas = [], clientes 
     if (!localidad?.id || !vehiculo.id || !medidor.id) return flash('La localidad no tiene repartidor, vehículo y medidor configurados; solicita a ADMIN completar la asignación');
     if (!Number.isFinite(inicio) || inicio < 0) return flash('Captura una lectura inicial válida');
     if (!Number.isFinite(aguaCargadaLitros) || aguaCargadaLitros <= 0) return flash('Captura los litros de agua cargados');
+    if (aguaCargadaLitros > MAX_AGUA_JORNADA_LITROS) return flash(`La carga inicial no puede superar ${MAX_AGUA_JORNADA_LITROS.toLocaleString('es-MX')} L`);
     if (lecturaAnterior !== null && inicio < Number(lecturaAnterior)) return flash('La lectura inicial no puede ser menor que la última lectura registrada');
     try {
       const jornadaRef = db.collection('jornadas').doc();
@@ -255,7 +259,7 @@ function JornadaMedidor({ localidades = [], jornadas = [], notas = [], clientes 
       React.createElement('div', { style: { background: 'var(--surface-2)', padding: 9, borderRadius: 8, fontSize: 12, marginBottom: 9 } }, 'Medidor asociado: ', form.medidorNombre || form.medidorId || 'Selecciona una localidad', ' · ID: ', form.medidorId || 'pendiente'),
       React.createElement('div', { style: { background: 'var(--info-bg)', padding: 9, borderRadius: 8, fontSize: 11, marginBottom: 9, color: 'var(--info-text)' } }, 'Escala física: ', medidorActual.digitos, ' dígitos · el sexto dígito incrementa cada ', medidorActual.litrosPorIncremento, ' L'),
       React.createElement('input', { value: form.lecturaInicial, onChange: e => setForm(f => ({ ...f, lecturaInicial: e.target.value })), inputMode: 'decimal', placeholder: 'Lectura inicial física del medidor', style: { width: '100%', padding: 11, boxSizing: 'border-box', borderRadius: 8, border: '1px solid var(--line-strong)', background: 'var(--surface)', color: 'var(--ink)', marginBottom: 10 } }),
-      React.createElement('input', { value: form.aguaCargadaLitros, onChange: e => setForm(f => ({ ...f, aguaCargadaLitros: e.target.value })), inputMode: 'decimal', type: 'number', min: 0.01, step: 0.01, placeholder: 'Litros cargados en el vehículo', style: { width: '100%', padding: 11, boxSizing: 'border-box', borderRadius: 8, border: '1px solid var(--line-strong)', background: 'var(--surface)', color: 'var(--ink)', marginBottom: 10 } }),
+      React.createElement('input', { value: form.aguaCargadaLitros, onChange: e => setForm(f => ({ ...f, aguaCargadaLitros: e.target.value })), inputMode: 'decimal', type: 'number', min: 0.01, step: 0.01, placeholder: 'Litros cargados en el vehículo (máximo 5,000 L)', max: MAX_AGUA_JORNADA_LITROS, style: { width: '100%', padding: 11, boxSizing: 'border-box', borderRadius: 8, border: '1px solid var(--line-strong)', background: 'var(--surface)', color: 'var(--ink)', marginBottom: 10 } }),
       React.createElement('button', { onClick: iniciar, style: { width: '100%', padding: 14, border: 0, borderRadius: 9, background: 'var(--accent)', color: 'var(--ink)', fontWeight: 800 } }, 'Iniciar jornada')
     )
   );

@@ -18,6 +18,10 @@ Permitir que el repartidor agregue agua adicional mientras una jornada permanece
 
 La operación de recarga se registra en la colección `cargas_agua`. Cada movimiento queda ligado a `jornadaId`, `localidadId`, `vehiculoId`, `medidorId`, repartidor, fecha y litros del movimiento. La carga inicial también se registra en esta colección dentro de la misma transacción que abre la jornada.
 
+## Límite de carga
+
+La carga acumulada por jornada y vehículo tiene un máximo de **5,000 litros**. La validación existe en tres niveles: el campo de carga inicial usa `max=5000`, la interfaz rechaza una recarga que rebase el acumulado y el módulo transaccional vuelve a validar el límite antes de escribir. Las reglas locales de Firestore también exigen que el documento resultante de la jornada no supere `aguaCargadaLitros <= 5000`, por lo que el límite no depende únicamente de la interfaz.
+
 ## Interfaz
 
 Dentro de una jornada abierta del rol REPARTIDOR aparece el bloque **RECARGA ADICIONAL**. El repartidor captura litros y pulsa **Agregar litros**. La interfaz informa que el movimiento afecta al saldo de agua del mismo vehículo y jornada, pero no al medidor.
