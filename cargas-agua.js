@@ -18,8 +18,8 @@
     error.__appDetalle = detalle;
     return error;
   };
-  const MAX_AGUA_JORNADA_LITROS = 5000;
-  global.APP_MAX_AGUA_JORNADA_LITROS = MAX_AGUA_JORNADA_LITROS;
+  const CAPACIDAD_TANQUE_LITROS = 5000;
+  global.APP_CAPACIDAD_TANQUE_LITROS = CAPACIDAD_TANQUE_LITROS;
   const estaEnLinea = () => typeof navigator === 'undefined' || navigator.onLine;
   const incrementoAtómico = valor => {
     const fieldValue = global.firebase?.firestore?.FieldValue;
@@ -48,12 +48,14 @@
       if (!jornada.repartidorId || jornada.repartidorId !== carga.usuario.uid) throw errorBloqueo('La recarga no corresponde al repartidor de la jornada', { tipo: 'repartidor_no_autorizado' });
       if (!jornada.localidadId || !jornada.vehiculoId || !jornada.medidorId) throw errorBloqueo('La jornada no tiene localidad, vehículo y medidor completos', { tipo: 'referencias_incompletas' });
 
+      const capacidadTanque = Number(jornada.capacidadTanqueLitros || CAPACIDAD_TANQUE_LITROS);
       const aguaDisponibleAntes = Number(jornada.aguaDisponibleLitros || 0);
       const aguaCargadaAntes = Number(jornada.aguaCargadaLitros || 0);
       const recargasAntes = Number(jornada.litrosRecargadosAcumulados || 0);
       const aguaDisponibleDespues = aguaDisponibleAntes + carga.litros;
       const aguaCargadaDespues = aguaCargadaAntes + carga.litros;
-      if (aguaCargadaDespues > MAX_AGUA_JORNADA_LITROS) throw errorBloqueo(`La carga acumulada no puede superar ${MAX_AGUA_JORNADA_LITROS.toLocaleString('es-MX')} L`, { tipo: 'limite_carga_jornada', maximoLitros: MAX_AGUA_JORNADA_LITROS, cargaAcumuladaLitros: aguaCargadaAntes, litrosSolicitados: carga.litros });
+      if (capacidadTanque > CAPACIDAD_TANQUE_LITROS) throw errorBloqueo(`La capacidad del tanque no puede superar ${CAPACIDAD_TANQUE_LITROS.toLocaleString('es-MX')} L`, { tipo: 'capacidad_tanque_invalida', maximoLitros: CAPACIDAD_TANQUE_LITROS });
+      if (aguaDisponibleDespues > capacidadTanque) throw errorBloqueo(`La recarga excede el espacio disponible. Capacidad: ${capacidadTanque.toLocaleString('es-MX')} L`, { tipo: 'capacidad_tanque_excedida', capacidadTanqueLitros: capacidadTanque, disponibleAntesLitros: aguaDisponibleAntes, litrosSolicitados: carga.litros });
       const datosCarga = {
         jornadaId: carga.jornadaId,
         tipo: carga.tipo,
@@ -62,6 +64,7 @@
         aguaDisponibleDespuesLitros: aguaDisponibleDespues,
         aguaCargadaAcumuladaLitros: aguaCargadaDespues,
         litrosRecargadosAcumulados: recargasAntes + carga.litros,
+        capacidadTanqueLitros: capacidadTanque,
         localidadId: jornada.localidadId,
         localidadNombre: jornada.localidadNombre || jornada.localidad || '',
         vehiculoId: jornada.vehiculoId,
@@ -79,6 +82,7 @@
       writer.set(cargaRef, datosCarga);
       const delta = usarIncrementos ? incrementoAtómico(carga.litros) : null;
       writer.update(jornadaRef, {
+        capacidadTanqueLitros: capacidadTanque,
         aguaDisponibleLitros: delta || aguaDisponibleDespues,
         aguaCargadaLitros: delta || aguaCargadaDespues,
         litrosRecargadosAcumulados: delta || recargasAntes + carga.litros,

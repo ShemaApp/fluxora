@@ -1,7 +1,7 @@
 /* jornada.js — Jornada y medidor.
    La localidad es la unidad operativa; vehículo y medidor llegan como
    referencias separadas desde su asignación administrativa. */
-const MAX_AGUA_JORNADA_LITROS = 5000;
+const CAPACIDAD_TANQUE_LITROS = 5000;
 function JornadaMedidor({ localidades = [], jornadas = [], notas = [], clientes = [], cargasAgua = [], medicion = null, vehiculos = [], medidores = [], currentUser = {}, onIrA }) {
   const localidadesDisponibles = obtenerLocalidadesAsignadas({ localidades, currentUser, localidadIds: currentUser.localidadIds });
   const jornadaAbierta = (jornadas || []).find(j => j.estado === 'abierta' && (currentUser.role === 'admin' || j.repartidorId === currentUser.uid));
@@ -46,6 +46,9 @@ function JornadaMedidor({ localidades = [], jornadas = [], notas = [], clientes 
   const clientesAtendidos = new Set((notas || []).filter(n => jornadaAbierta && n.capturadoPorUid === jornadaAbierta.repartidorId && new Date(n.fecha || 0).getTime() >= new Date(jornadaAbierta.fechaInicio || 0).getTime()).map(n => n.clienteId));
   const cargasJornada = (cargasAgua || []).filter(carga => jornadaAbierta && carga.jornadaId === jornadaAbierta.id);
   const litrosRecargadosJornada = cargasJornada.filter(carga => carga.tipo === 'recarga').reduce((total, carga) => total + Number(carga.litros || 0), 0);
+  const capacidadTanqueLitros = Number(jornadaAbierta?.capacidadTanqueLitros || CAPACIDAD_TANQUE_LITROS);
+  const aguaDisponibleJornada = Math.max(0, Number(jornadaAbierta?.aguaDisponibleLitros || 0));
+  const porcentajeAguaJornada = capacidadTanqueLitros > 0 ? Math.max(0, Math.min(100, aguaDisponibleJornada / capacidadTanqueLitros * 100)) : 0;
   const flash = texto => { setMensaje(texto); setTimeout(() => setMensaje(''), 3000); };
 
   useEffect(() => {
@@ -57,8 +60,8 @@ function JornadaMedidor({ localidades = [], jornadas = [], notas = [], clientes 
     if (!jornadaAbierta) return flash('Primero inicia una jornada');
     if (currentUser.role !== 'repartidor') return flash('Solo el repartidor de la jornada puede registrar una recarga');
     if (!Number.isFinite(litros) || litros <= 0) return flash('Captura una cantidad de litros válida');
-    const aguaCargadaActual = Number(jornadaAbierta.aguaCargadaLitros || 0);
-    if (aguaCargadaActual + litros > MAX_AGUA_JORNADA_LITROS) return flash(`La carga acumulada no puede superar ${MAX_AGUA_JORNADA_LITROS.toLocaleString('es-MX')} L`);
+    const aguaDisponibleActual = Number(jornadaAbierta.aguaDisponibleLitros || 0);
+    if (aguaDisponibleActual + litros > CAPACIDAD_TANQUE_LITROS) return flash(`La recarga excede el espacio disponible. Capacidad del tanque: ${CAPACIDAD_TANQUE_LITROS.toLocaleString('es-MX')} L`);
     const runtime = typeof window !== 'undefined' ? window : globalThis;
     if (typeof runtime.appRegistrarRecargaAgua !== 'function') return flash('El módulo de recargas no está disponible');
     setRecargando(true);
@@ -103,7 +106,7 @@ function JornadaMedidor({ localidades = [], jornadas = [], notas = [], clientes 
     if (!localidad?.id || !vehiculo.id || !medidor.id) return flash('La localidad no tiene repartidor, vehículo y medidor configurados; solicita a ADMIN completar la asignación');
     if (!Number.isFinite(inicio) || inicio < 0) return flash('Captura una lectura inicial válida');
     if (!Number.isFinite(aguaCargadaLitros) || aguaCargadaLitros <= 0) return flash('Captura los litros de agua cargados');
-    if (aguaCargadaLitros > MAX_AGUA_JORNADA_LITROS) return flash(`La carga inicial no puede superar ${MAX_AGUA_JORNADA_LITROS.toLocaleString('es-MX')} L`);
+    if (aguaCargadaLitros > CAPACIDAD_TANQUE_LITROS) return flash(`La carga inicial no puede superar la capacidad del tanque de ${CAPACIDAD_TANQUE_LITROS.toLocaleString('es-MX')} L`);
     if (lecturaAnterior !== null && inicio < Number(lecturaAnterior)) return flash('La lectura inicial no puede ser menor que la última lectura registrada');
     try {
       const jornadaRef = db.collection('jornadas').doc();
@@ -115,13 +118,13 @@ function JornadaMedidor({ localidades = [], jornadas = [], notas = [], clientes 
           estado: 'abierta', repartidorId: currentUser.uid, repartidorNombre: currentUser.nombre || '',
           localidadId: localidad.id, localidadNombre: localidad.nombre || '', localidad: localidad.nombre || '', vehiculo: vehiculo.nombre, vehiculoId: vehiculo.id, vehiculoNombre: vehiculo.nombre, medidorId: medidor.id, medidorNombre: medidor.nombre,
           lecturaAnterior: lecturaAnterior === null ? null : Number(lecturaAnterior), lecturaInicial: inicio, lecturaActual: inicio, lecturaCalculadaActual: inicio,
-          aguaCargadaLitros, aguaDisponibleLitros: aguaCargadaLitros, litrosRecargadosAcumulados: 0, litrosMedidos: null, litrosVendidos: 0, litrosVendidosAcumulados: 0, otrasSalidasLitros: 0, diferenciaLitros: null,
+          capacidadTanqueLitros: CAPACIDAD_TANQUE_LITROS, aguaCargadaLitros, aguaDisponibleLitros: aguaCargadaLitros, litrosRecargadosAcumulados: 0, litrosMedidos: null, litrosVendidos: 0, litrosVendidosAcumulados: 0, otrasSalidasLitros: 0, diferenciaLitros: null,
           unidadComercial, litrosPorUnidad, incrementoContadorPorUnidad, precioPorUnidad, medidorDigitos: medidor.digitos, medidorLitrosPorIncremento: medidor.litrosPorIncremento, creadoOffline: typeof navigator !== 'undefined' && !navigator.onLine
         });
         tx.set(cargaInicialRef, {
           jornadaId: jornadaRef.id, tipo: 'carga_inicial', litros: aguaCargadaLitros,
           aguaDisponibleAntesLitros: 0, aguaDisponibleDespuesLitros: aguaCargadaLitros, aguaCargadaAcumuladaLitros: aguaCargadaLitros,
-          litrosRecargadosAcumulados: 0, localidadId: localidad.id, localidadNombre: localidad.nombre || '',
+          capacidadTanqueLitros: CAPACIDAD_TANQUE_LITROS, litrosRecargadosAcumulados: 0, localidadId: localidad.id, localidadNombre: localidad.nombre || '',
           vehiculoId: vehiculo.id, vehiculoNombre: vehiculo.nombre || '', medidorId: medidor.id, medidorNombre: medidor.nombre || '',
           jornadaEstado: 'abierta', fechaHora: fechaInicio, usuarioUid: currentUser.uid, usuarioNombre: currentUser.nombre || '',
           repartidorId: currentUser.uid, repartidorNombre: currentUser.nombre || '', origen: 'apertura_jornada'
@@ -232,12 +235,12 @@ function JornadaMedidor({ localidades = [], jornadas = [], notas = [], clientes 
       React.createElement('div', { style: { background: 'var(--surface-2)', borderRadius: 9, padding: 10, marginBottom: 10 } },
         React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 800 } },
           React.createElement('span', null, 'AGUA DISPONIBLE'),
-          React.createElement('span', { style: { color: Number(jornadaAbierta.aguaDisponibleLitros || 0) <= Number(jornadaAbierta.aguaCargadaLitros || 0) * .15 ? 'var(--danger-text)' : 'var(--ok-text)' } }, Number(jornadaAbierta.aguaDisponibleLitros || 0).toFixed(2), ' L')
+          React.createElement('span', { style: { color: porcentajeAguaJornada <= 15 ? 'var(--danger-text)' : 'var(--ok-text)' } }, aguaDisponibleJornada.toFixed(2), ' L')
         ),
         React.createElement('div', { style: { height: 8, background: 'var(--line)', borderRadius: 8, overflow: 'hidden', marginTop: 7 } },
-          React.createElement('div', { style: { width: `${Number(jornadaAbierta.aguaCargadaLitros || 0) > 0 ? Math.max(0, Math.min(100, Number(jornadaAbierta.aguaDisponibleLitros || 0) / Number(jornadaAbierta.aguaCargadaLitros || 1) * 100)) : 0}%`, height: '100%', background: 'var(--accent)' } })
+          React.createElement('div', { style: { width: `${porcentajeAguaJornada}%`, height: '100%', background: porcentajeAguaJornada <= 15 ? 'var(--danger-text)' : 'var(--accent)' } })
         ),
-        React.createElement('div', { style: { fontSize: 10, color: 'var(--ink-soft)', marginTop: 5 } }, 'Carga acumulada: ', Number(jornadaAbierta.aguaCargadaLitros || 0).toFixed(2), ' L · Recargas: ', litrosRecargadosJornada.toFixed(2), ' L · Lectura calculada: ', Number(jornadaAbierta.lecturaCalculadaActual ?? jornadaAbierta.lecturaActual ?? jornadaAbierta.lecturaInicial).toFixed(2), ' contador')
+        React.createElement('div', { style: { fontSize: 10, color: 'var(--ink-soft)', marginTop: 5 } }, 'Capacidad: ', capacidadTanqueLitros.toFixed(2), ' L · Cargado en el día: ', Number(jornadaAbierta.aguaCargadaLitros || 0).toFixed(2), ' L · Recargas: ', litrosRecargadosJornada.toFixed(2), ' L · Lectura calculada: ', Number(jornadaAbierta.lecturaCalculadaActual ?? jornadaAbierta.lecturaActual ?? jornadaAbierta.lecturaInicial).toFixed(2), ' contador')
       ),
       currentUser.role === 'repartidor' && React.createElement('div', { className: 'fx-recharge-panel', style: { background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 9, padding: 10, marginBottom: 10 } },
         React.createElement('div', { style: { fontSize: 11, fontWeight: 800, marginBottom: 4 } }, 'RECARGA ADICIONAL'),
@@ -259,7 +262,7 @@ function JornadaMedidor({ localidades = [], jornadas = [], notas = [], clientes 
       React.createElement('div', { style: { background: 'var(--surface-2)', padding: 9, borderRadius: 8, fontSize: 12, marginBottom: 9 } }, 'Medidor asociado: ', form.medidorNombre || form.medidorId || 'Selecciona una localidad', ' · ID: ', form.medidorId || 'pendiente'),
       React.createElement('div', { style: { background: 'var(--info-bg)', padding: 9, borderRadius: 8, fontSize: 11, marginBottom: 9, color: 'var(--info-text)' } }, 'Escala física: ', medidorActual.digitos, ' dígitos · el sexto dígito incrementa cada ', medidorActual.litrosPorIncremento, ' L'),
       React.createElement('input', { value: form.lecturaInicial, onChange: e => setForm(f => ({ ...f, lecturaInicial: e.target.value })), inputMode: 'decimal', placeholder: 'Lectura inicial física del medidor', style: { width: '100%', padding: 11, boxSizing: 'border-box', borderRadius: 8, border: '1px solid var(--line-strong)', background: 'var(--surface)', color: 'var(--ink)', marginBottom: 10 } }),
-      React.createElement('input', { value: form.aguaCargadaLitros, onChange: e => setForm(f => ({ ...f, aguaCargadaLitros: e.target.value })), inputMode: 'decimal', type: 'number', min: 0.01, step: 0.01, placeholder: 'Litros cargados en el vehículo (máximo 5,000 L)', max: MAX_AGUA_JORNADA_LITROS, style: { width: '100%', padding: 11, boxSizing: 'border-box', borderRadius: 8, border: '1px solid var(--line-strong)', background: 'var(--surface)', color: 'var(--ink)', marginBottom: 10 } }),
+      React.createElement('input', { value: form.aguaCargadaLitros, onChange: e => setForm(f => ({ ...f, aguaCargadaLitros: e.target.value })), inputMode: 'decimal', type: 'number', min: 0.01, step: 0.01, placeholder: 'Litros cargados en el vehículo (máximo 5,000 L)', max: CAPACIDAD_TANQUE_LITROS, style: { width: '100%', padding: 11, boxSizing: 'border-box', borderRadius: 8, border: '1px solid var(--line-strong)', background: 'var(--surface)', color: 'var(--ink)', marginBottom: 10 } }),
       React.createElement('button', { onClick: iniciar, style: { width: '100%', padding: 14, border: 0, borderRadius: 9, background: 'var(--accent)', color: 'var(--ink)', fontWeight: 800 } }, 'Iniciar jornada')
     )
   );

@@ -18,9 +18,11 @@ Permitir que el repartidor agregue agua adicional mientras una jornada permanece
 
 La operación de recarga se registra en la colección `cargas_agua`. Cada movimiento queda ligado a `jornadaId`, `localidadId`, `vehiculoId`, `medidorId`, repartidor, fecha y litros del movimiento. La carga inicial también se registra en esta colección dentro de la misma transacción que abre la jornada.
 
-## Límite de carga
+## Capacidad máxima del tanque
 
-La carga acumulada por jornada y vehículo tiene un máximo de **5,000 litros**. La validación existe en tres niveles: el campo de carga inicial usa `max=5000`, la interfaz rechaza una recarga que rebase el acumulado y el módulo transaccional vuelve a validar el límite antes de escribir. Las reglas locales de Firestore también exigen que el documento resultante de la jornada no supere `aguaCargadaLitros <= 5000`, por lo que el límite no depende únicamente de la interfaz.
+El camión tiene una capacidad instantánea máxima de **5,000 litros**. El límite se aplica al saldo disponible después de cada carga: `aguaDisponibleLitros + litrosDeRecarga <= 5000`. No se limita el total vendido ni el total cargado a lo largo del día. Por eso, un camión puede vender más de 5,000 litros en una jornada si realiza recargas sucesivas.
+
+La validación existe en tres niveles: la carga inicial usa `max=5000`, la interfaz rechaza una recarga que exceda el espacio libre y el módulo transaccional vuelve a validar el saldo antes de escribir. Las reglas locales de Firestore también exigen que el documento resultante de la jornada no supere `aguaDisponibleLitros <= 5000`, por lo que el límite no depende únicamente de la interfaz.
 
 ## Interfaz
 
@@ -65,4 +67,4 @@ La prueba conductual del emulador confirmó que el repartidor puede crear la rec
 
 ## Pendientes no incluidos
 
-No se implementó una capacidad máxima del tanque porque los vehículos actuales no tienen un campo de capacidad configurado. Tampoco se agregó una recarga de planta o un inventario global de agua; la recarga queda registrada como movimiento de la jornada y del vehículo. Si se requiere descontar la recarga de una existencia de planta, debe definirse primero el origen, la capacidad y el responsable de esa operación.
+La capacidad actual es una constante operativa de 5,000 litros; no se agregó todavía una capacidad configurable por vehículo. Tampoco se agregó una recarga de planta o un inventario global de agua; la recarga queda registrada como movimiento de la jornada y del vehículo. Si se requiere descontar la recarga de una existencia de planta, debe definirse primero el origen, la capacidad y el responsable de esa operación.
