@@ -141,9 +141,10 @@ const Menu = () => React.createElement(Ic, null, React.createElement("line", {
 }));
 const Card = ({
   children,
-  style = {}
+  style = {},
+  className = ''
 }) => React.createElement("div", {
-    className: 'fx-card',
+    className: `fx-card ${className}`.trim(),
     style: {
     background: 'var(--surface)',
     border: '1px solid var(--line)',

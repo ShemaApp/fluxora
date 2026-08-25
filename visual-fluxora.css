@@ -2296,3 +2296,303 @@ body::before { display: none !important; }
   .fx-control-record-detail { font-size: 10px !important; }
   .fx-control-tariffs > div:not(:first-child) { font-size: 9px !important; }
 }
+
+
+/* Iteración 31 — Reportes y Caja: datos administrativos sin ornamentación. */
+.fx-page-reports,
+.fx-page-cash {
+  max-width: 1120px !important;
+  padding: 10px 0 24px !important;
+}
+.fx-reports-heading,
+.fx-cash-heading {
+  color: var(--fx-navy) !important;
+  font-size: 22px !important;
+  font-weight: 800 !important;
+  letter-spacing: -.02em !important;
+  margin-bottom: 10px !important;
+}
+.fx-reports-intro {
+  color: var(--fx-ink-soft) !important;
+  font-size: 11px !important;
+  margin-bottom: 10px !important;
+}
+.fx-reports-period {
+  grid-template-columns: 1fr 1fr !important;
+  gap: 7px !important;
+  padding: 10px 0 !important;
+  border-top: 1px solid var(--fx-line) !important;
+  border-bottom: 1px solid var(--fx-line) !important;
+  margin-bottom: 10px !important;
+}
+.fx-reports-period label {
+  color: var(--fx-ink-soft) !important;
+  font-size: 10px !important;
+  text-transform: uppercase !important;
+  letter-spacing: .06em !important;
+}
+.fx-reports-period input,
+.fx-page-reports input[type="date"] {
+  min-height: 36px !important;
+  border: 1px solid var(--fx-line) !important;
+  border-radius: 4px !important;
+  background: var(--fx-surface) !important;
+  color: var(--fx-ink) !important;
+  font-size: 11px !important;
+}
+.fx-reports-stats {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 0 !important;
+  margin-bottom: 8px !important;
+  border-top: 1px solid var(--fx-line) !important;
+  border-bottom: 1px solid var(--fx-line) !important;
+}
+.fx-reports-stats > * {
+  min-height: 64px !important;
+  border-radius: 0 !important;
+  border: 0 !important;
+  border-right: 1px solid var(--fx-line) !important;
+  box-shadow: none !important;
+}
+.fx-reports-stats > *:last-child {
+  border-right: 0 !important;
+}
+.fx-reports-summary {
+  color: var(--fx-ink-soft) !important;
+  padding: 6px 0 9px !important;
+  border-bottom: 1px solid var(--fx-line) !important;
+  line-height: 1.6 !important;
+  font-size: 10px !important;
+}
+.fx-reports-actions {
+  gap: 6px !important;
+  margin: 10px 0 14px !important;
+}
+.fx-reports-actions button {
+  min-height: 36px !important;
+  padding: 8px 10px !important;
+  border-radius: 4px !important;
+  font-size: 10px !important;
+  box-shadow: none !important;
+}
+.fx-reports-export-primary {
+  background: var(--fx-navy) !important;
+  color: #fff !important;
+}
+.fx-reports-export-secondary {
+  background: var(--fx-surface) !important;
+  border-color: var(--fx-line) !important;
+  color: var(--fx-ink) !important;
+}
+.fx-reports-section,
+.fx-cash-summary,
+.fx-cash-expense-form,
+.fx-cash-person-report,
+.fx-cash-history,
+.fx-cash-expenses {
+  background: transparent !important;
+  border: 0 !important;
+  border-top: 1px solid var(--fx-line) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 12px 0 !important;
+  margin: 0 !important;
+}
+.fx-reports-section-title,
+.fx-cash-section-title {
+  color: var(--fx-navy) !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  letter-spacing: .07em !important;
+  text-transform: uppercase !important;
+  margin: 0 0 7px !important;
+}
+.fx-report-tariff-row,
+.fx-report-reconciliation-row {
+  border-top-color: var(--fx-line) !important;
+  padding: 7px 0 !important;
+  color: var(--fx-ink) !important;
+  font-size: 10px !important;
+  line-height: 1.4 !important;
+}
+.fx-report-tariff-row strong,
+.fx-report-reconciliation-row strong {
+  color: var(--fx-ink) !important;
+}
+.fx-report-reconciliation-row > div {
+  color: var(--fx-ink-soft) !important;
+  margin-top: 2px !important;
+}
+.fx-cash-message {
+  background: transparent !important;
+  border-bottom: 1px solid var(--fx-line) !important;
+  border-radius: 0 !important;
+  padding: 7px 0 !important;
+  color: var(--fx-ink) !important;
+  font-size: 11px !important;
+  margin-bottom: 0 !important;
+}
+.fx-cash-summary {
+  border-left: 0 !important;
+  padding-top: 10px !important;
+}
+.fx-cash-summary > div {
+  min-height: 0 !important;
+}
+.fx-cash-summary .fx-cash-close-action {
+  background: var(--fx-navy) !important;
+  color: #fff !important;
+}
+.fx-cash-close-action {
+  min-height: 38px !important;
+  border-radius: 4px !important;
+  margin-top: 10px !important;
+  padding: 8px 12px !important;
+  font-size: 11px !important;
+  box-shadow: none !important;
+}
+.fx-cash-block-note,
+.fx-cash-draft-note {
+  display: block !important;
+  color: var(--fx-ink-soft) !important;
+  font-size: 10px !important;
+  margin-top: 5px !important;
+  text-align: left !important;
+}
+.fx-cash-draft-note {
+  color: var(--fx-navy) !important;
+}
+.fx-cash-expense-form .fx-cash-section-title {
+  margin-bottom: 9px !important;
+}
+.fx-page-cash input {
+  min-height: 36px !important;
+  border-radius: 4px !important;
+  border-color: var(--fx-line) !important;
+  background: var(--fx-surface) !important;
+  color: var(--fx-ink) !important;
+  font-size: 11px !important;
+}
+.fx-cash-expense-form button,
+.fx-cash-person-report button,
+.fx-cash-expenses button,
+.fx-cash-history button {
+  min-height: 34px !important;
+  border-radius: 4px !important;
+  box-shadow: none !important;
+  font-size: 10px !important;
+}
+.fx-cash-person-report > div:first-child {
+  margin-bottom: 8px !important;
+}
+.fx-cash-person-report > div:first-child > span {
+  color: var(--fx-navy) !important;
+  font-size: 10px !important;
+  letter-spacing: .07em !important;
+  text-transform: uppercase !important;
+}
+.fx-cash-person-report button {
+  border: 1px solid var(--fx-line) !important;
+  background: var(--fx-surface) !important;
+  color: var(--fx-ink-soft) !important;
+  padding: 7px !important;
+}
+.fx-cash-history > div:not(.fx-cash-section-title),
+.fx-cash-expenses > div:not(.fx-cash-section-title) {
+  border-bottom-color: var(--fx-line) !important;
+}
+.fx-cash-history > div:not(.fx-cash-section-title) {
+  padding: 8px 0 !important;
+  margin-bottom: 0 !important;
+}
+.fx-cash-expenses > div:not(.fx-cash-section-title) {
+  padding-bottom: 8px !important;
+  margin-bottom: 0 !important;
+}
+.fx-cash-close-review,
+.fx-cash-incidents {
+  background: transparent !important;
+  border: 1px solid var(--fx-line) !important;
+  border-radius: 4px !important;
+  box-shadow: none !important;
+}
+.fx-cash-incidents {
+  border-color: var(--fx-line) !important;
+}
+.fx-cash-incidents-title {
+  font-size: 11px !important;
+  letter-spacing: .05em !important;
+  text-transform: uppercase !important;
+}
+
+@media (max-width: 767px) {
+  .fx-page-reports,
+  .fx-page-cash { padding: 8px 0 20px !important; }
+  .fx-reports-stats { grid-template-columns: 1fr 1fr !important; }
+  .fx-reports-stats > *:nth-child(2) { border-right: 0 !important; }
+  .fx-reports-stats > *:nth-child(-n + 2) { border-bottom: 1px solid var(--fx-line) !important; }
+  .fx-reports-stats > * { min-height: 58px !important; }
+  .fx-reports-actions { flex-direction: column !important; }
+  .fx-reports-actions button { width: 100% !important; }
+  .fx-report-tariff-row,
+  .fx-report-reconciliation-row { font-size: 9px !important; }
+}
+
+
+/* Afinación industrial: quitar superficies decorativas, mantener la jerarquía del dato. */
+.fx-reports-stats > .fx-stat-tile {
+  background: var(--fx-surface) !important;
+  color: var(--fx-navy) !important;
+  border-radius: 0 !important;
+  border-right: 1px solid var(--fx-line) !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+  padding: 10px 9px !important;
+}
+.fx-reports-stats > .fx-stat-tile:last-child {
+  border-right: 0 !important;
+}
+.fx-reports-stats > .fx-stat-tile > div:first-child {
+  color: var(--fx-navy) !important;
+  font-size: 19px !important;
+}
+.fx-reports-stats > .fx-stat-tile > div:last-child {
+  color: var(--fx-ink-soft) !important;
+  font-size: 9px !important;
+  margin-top: 4px !important;
+  opacity: 1 !important;
+}
+.fx-page-cash .fx-card {
+  border-left: 0 !important;
+  border-right: 0 !important;
+  border-bottom: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  margin-bottom: 0 !important;
+}
+.fx-page-cash .fx-card.fx-cash-incidents {
+  border: 1px solid var(--fx-line) !important;
+  background: transparent !important;
+  margin-top: 8px !important;
+}
+.fx-page-cash .fx-card.fx-cash-close-review {
+  border: 1px solid var(--fx-line) !important;
+  background: transparent !important;
+}
+.fx-cash-person-report .fx-btn-fill,
+.fx-cash-person-report .fx-btn-outline,
+.fx-cash-expense-form .fx-btn-fill,
+.fx-cash-expense-form .fx-btn-outline {
+  border-radius: 4px !important;
+  box-shadow: none !important;
+}
+.fx-cash-expense-form .fx-btn-fill {
+  background: var(--fx-navy) !important;
+  color: #fff !important;
+}
+.fx-cash-history .fx-tag,
+.fx-cash-expenses .fx-tag {
+  border-radius: 3px !important;
+  padding: 2px 5px !important;
+  font-size: 9px !important;
+}
