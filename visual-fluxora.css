@@ -2181,3 +2181,118 @@ body::before { display: none !important; }
 .fx-page-coverage .fx-coverage-localities {
   display: block !important;
 }
+
+
+/* Iteración 30 — Control: cierres y conciliaciones sin ruido visual. */
+.fx-page-control {
+  max-width: 1100px !important;
+  padding: 10px 0 24px !important;
+}
+.fx-control-heading {
+  color: var(--fx-navy) !important;
+  font-size: 22px !important;
+  font-weight: 800 !important;
+  letter-spacing: -.02em !important;
+  margin-bottom: 10px !important;
+}
+.fx-control-intro {
+  display: none !important;
+}
+.fx-control-record {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  gap: 6px 14px !important;
+  align-items: start !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-top: 1px solid var(--fx-line) !important;
+  border-radius: 0 !important;
+  padding: 12px 0 !important;
+  margin: 0 !important;
+}
+.fx-control-record-heading {
+  grid-column: 1 / -1 !important;
+  align-items: baseline !important;
+}
+.fx-control-record-heading > strong {
+  color: var(--fx-ink) !important;
+  font-size: 13px !important;
+}
+.fx-control-record-heading > span {
+  color: var(--fx-ink-soft) !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  letter-spacing: .04em !important;
+}
+.fx-control-record-context {
+  grid-column: 1 / -1 !important;
+  color: var(--fx-ink-soft) !important;
+  font-size: 10px !important;
+  margin-top: 0 !important;
+}
+.fx-control-record-detail {
+  grid-column: 1 / -1 !important;
+  color: var(--fx-ink) !important;
+  font-size: 11px !important;
+  line-height: 1.45 !important;
+  margin-top: 3px !important;
+}
+.fx-control-tariffs {
+  grid-column: 1 / -1 !important;
+  background: transparent !important;
+  border-top: 1px solid var(--fx-line) !important;
+  border-bottom: 1px solid var(--fx-line) !important;
+  border-radius: 0 !important;
+  padding: 7px 0 !important;
+  margin-top: 2px !important;
+}
+.fx-control-tariffs > div:first-child {
+  color: var(--fx-ink-soft) !important;
+  font-size: 9px !important;
+  margin-bottom: 3px !important;
+}
+.fx-control-tariffs > div:not(:first-child) {
+  border-top-color: var(--fx-line) !important;
+  padding: 5px 0 !important;
+  font-size: 10px !important;
+  line-height: 1.35 !important;
+}
+.fx-control-record > .fx-control-field {
+  grid-column: 1 / -1 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  min-height: 34px !important;
+  margin-top: 0 !important;
+  padding: 8px 9px !important;
+  border-radius: 4px !important;
+  border-color: var(--fx-line) !important;
+  background: var(--fx-surface) !important;
+  font-size: 10px !important;
+}
+.fx-control-record > .fx-control-field + .fx-control-field {
+  margin-top: 0 !important;
+}
+.fx-page-control > div:last-child {
+  color: var(--fx-ink-soft) !important;
+  font-size: 11px !important;
+}
+
+@media (min-width: 768px) {
+  .fx-control-record > .fx-control-field {
+    width: auto !important;
+  }
+  .fx-control-record > .fx-control-field:nth-last-child(2) {
+    grid-column: 1 !important;
+  }
+  .fx-control-record > .fx-control-field:last-child {
+    grid-column: 2 !important;
+    min-width: 260px !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .fx-page-control { padding: 8px 0 20px !important; }
+  .fx-control-record { gap: 5px 9px !important; padding: 11px 0 !important; }
+  .fx-control-record-detail { font-size: 10px !important; }
+  .fx-control-tariffs > div:not(:first-child) { font-size: 9px !important; }
+}
