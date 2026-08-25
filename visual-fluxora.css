@@ -1282,3 +1282,71 @@ body::before { display: none !important; }
   .fx-flota-item > div:last-child { display: flex !important; flex-direction: column !important; gap: 5px !important; }
   .fx-flota-item button { min-width: 70px !important; }
 }
+
+
+/* Encabezado global: marca centrada y regreso fijo en pantallas secundarias. */
+.app-topbar {
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  max-width: none !important;
+  transform: none !important;
+  padding-left: 16px !important;
+  padding-right: 16px !important;
+}
+.app-topbar-leading,
+.app-topbar-trailing {
+  position: relative !important;
+  z-index: 2 !important;
+  display: flex !important;
+  align-items: center !important;
+  min-width: 72px !important;
+}
+.app-topbar-trailing { justify-content: flex-end !important; margin-left: auto !important; }
+.app-topbar-brand {
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  z-index: 1 !important;
+  color: #FFFFFF !important;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  letter-spacing: .16em !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+  pointer-events: none !important;
+}
+.app-back-button {
+  display: grid !important;
+  place-items: center !important;
+  width: 34px !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  padding: 0 !important;
+  border: 1px solid rgba(255,255,255,.28) !important;
+  border-radius: 4px !important;
+  background: rgba(255,255,255,.08) !important;
+  color: #FFFFFF !important;
+  font-family: Arial, sans-serif !important;
+  font-size: 25px !important;
+  font-weight: 400 !important;
+  line-height: 30px !important;
+  text-align: center !important;
+  cursor: pointer !important;
+}
+.app-back-button:hover,
+.app-back-button:focus-visible {
+  background: rgba(18,184,210,.24) !important;
+  border-color: var(--fx-cyan-light) !important;
+  color: #FFFFFF !important;
+  outline: none !important;
+}
+.app-back-button:active { transform: scale(.97) !important; }
+
+@media (max-width: 767px) {
+  .app-topbar { padding-left: 12px !important; padding-right: 12px !important; }
+  .app-topbar-brand { font-size: 14px !important; letter-spacing: .13em !important; }
+  .app-topbar-leading,
+  .app-topbar-trailing { min-width: 62px !important; }
+}

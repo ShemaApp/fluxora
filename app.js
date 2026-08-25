@@ -118,10 +118,12 @@ function App() {
       boxSizing: 'border-box'
     }
   }, React.createElement(Row, {
+    className: 'app-topbar-leading',
     style: {
       gap: 10
     }
-  }, tab !== 'home' && tab !== 'config' && React.createElement("button", {
+  }, tab !== 'home' && React.createElement("button", {
+    className: 'app-back-button',
     onClick: volverAtras,
     title: 'Volver a la pantalla anterior',
     'aria-label': 'Volver a la pantalla anterior',
@@ -149,15 +151,17 @@ function App() {
       alignItems: 'center'
     }
   }, React.createElement(Menu, null)), React.createElement("div", {
+    className: 'app-topbar-brand',
     style: {
       fontSize: 14,
       fontWeight: 700,
       color: 'var(--accent)',
       fontFamily: 'var(--font-display)',
       textTransform: 'uppercase',
-      letterSpacing: '.02em'
+      letterSpacing: '.08em'
     }
-  }, NEGOCIO.nombre)), React.createElement(Row, {
+  }, 'FLUXORA')), React.createElement(Row, {
+    className: 'app-topbar-trailing',
     style: {
       gap: 6
     }

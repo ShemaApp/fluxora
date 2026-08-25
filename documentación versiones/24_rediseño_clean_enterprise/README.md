@@ -30,3 +30,8 @@ La interfaz debe priorizar los datos operativos y sus acciones principales, evit
 
 
 El Service Worker se actualiza a **`v1.6.1`** para invalidar el caché anterior y distribuir la capa visual renovada en instalaciones existentes.
+
+
+## Ajuste posterior del encabezado
+
+Como refinamiento de esta misma iteración, el nombre visible de negocio en la barra superior se fija como **FLUXORA** y se centra independientemente del ancho de los controles laterales. En toda pantalla secundaria se conserva el handler existente `volverAtras`, pero su control se presenta como un icono de regreso visible, compacto y fijado dentro de la barra superior. Este ajuste no modifica destinos, estados ni permisos.
