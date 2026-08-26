@@ -41,9 +41,9 @@ function FiltroClientes({ titulo, opciones, valor, onChange, contar }) {
 function Clientes({ clientes = [], notas = [], creditos = [], localidades: localidadesCatalogo = [], tarifas = [], servicios = [], comprobantes = [], currentUser = {} }) {
   const puedeEditar = currentUser.role === 'admin' || permisoEdita(currentUser).clientes;
   const puedeCrear = currentUser.role === 'admin';
-  const localidadesAsignadas = (localidadesCatalogo || []).filter(localidad => localidad.activo !== false && String(localidad.repartidorId || '').trim());
-  const localidadesPermitidas = currentUser.role === 'repartidor' ? obtenerLocalidadesAsignadas({ localidades: localidadesAsignadas, currentUser, localidadIds: currentUser.localidadIds }) : localidadesAsignadas;
-  const localidadesForm = currentUser.role === 'repartidor' ? localidadesPermitidas : localidadesAsignadas;
+  const localidadesActivas = (localidadesCatalogo || []).filter(localidad => localidad.activo !== false);
+  const localidadesPermitidas = currentUser.role === 'repartidor' ? obtenerLocalidadesAsignadas({ localidades: localidadesActivas, currentUser, localidadIds: currentUser.localidadIds }) : localidadesActivas;
+  const localidadesForm = currentUser.role === 'repartidor' ? localidadesPermitidas : localidadesActivas;
   const idsAlcance = new Set(localidadesPermitidas.map(localidad => localidad.id));
   const [filtroEstado, setFiltroEstado] = useState('activos');
   const [filtroCredito, setFiltroCredito] = useState('todos');
@@ -54,6 +54,9 @@ function Clientes({ clientes = [], notas = [], creditos = [], localidades: local
   const [histId, setHistId] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
   const [servicioDetalle, setServicioDetalle] = useState(null);
+  const [mostrarNuevaLocalidad, setMostrarNuevaLocalidad] = useState(false);
+  const [nombreLocalidadNueva, setNombreLocalidadNueva] = useState('');
+  const [guardandoLocalidad, setGuardandoLocalidad] = useState(false);
   const cmap = (creditos || []).reduce((mapa, credito) => { const saldo = Number(credito.saldo || 0); if (saldo > 0) mapa[credito.clienteId] = (mapa[credito.clienteId] || 0) + saldo; return mapa; }, {});
   const enAlcance = currentUser.role === 'repartidor' ? clientes.filter(cliente => idsAlcance.has(cliente.localidadId)) : clientes;
   const localidadDeCliente = cliente => normalizarLocalidad(cliente.localidadNombre || cliente.localidad || '');
@@ -75,7 +78,8 @@ function Clientes({ clientes = [], notas = [], creditos = [], localidades: local
   const guardar = async () => {
     if (!form?.nombre || !String(form.nombre).trim()) return alert('Captura el nombre del cliente.');
     const localidad = localidadPorId(form.localidadId);
-    if (!localidad || !localidad.repartidorId) return alert('Selecciona una localidad que ya esté asignada a un repartidor.');
+    if (!localidad) return alert('Selecciona una localidad existente.');
+    if (currentUser.role === 'repartidor' && !localidad.repartidorId && !(Array.isArray(localidad.repartidorIds) && localidad.repartidorIds.length)) return alert('Selecciona una localidad asignada a tu alcance operativo.');
     const metodoServicio = form.metodoServicio === METODO_RELLENO_MEDIDO ? METODO_RELLENO_MEDIDO : METODO_VENTA_CANTIDAD;
     const tarifaId = String(form.tarifaId || '').trim();
     const tarifa = (tarifas || []).find(item => String(item.id) === tarifaId && item.activo !== false);
@@ -87,14 +91,44 @@ function Clientes({ clientes = [], notas = [], creditos = [], localidades: local
       setForm(null);
     } catch (e) { alert('No se pudo guardar el cliente: ' + e.message); }
   };
+  const guardarNuevaLocalidad = async () => {
+    if (currentUser.role !== 'admin' || guardandoLocalidad) return;
+    const nombre = normalizarLocalidad(nombreLocalidadNueva);
+    if (!nombre) return alert('Captura el nombre de la localidad.');
+    if ((localidadesCatalogo || []).some(localidad => localidad.activo !== false && claveLocalidad(localidad.nombre) === claveLocalidad(nombre))) return alert('Ya existe una localidad con ese nombre.');
+    setGuardandoLocalidad(true);
+    try {
+      await db.collection(COLECCIONES.LOCALIDADES).add({
+        nombre,
+        activo: true,
+        creadoPorUid: currentUser.uid,
+        creadoPorNombre: currentUser.nombre || '',
+        fechaCreacion: new Date().toISOString(),
+        actualizadoPorUid: currentUser.uid,
+        actualizadoEn: new Date().toISOString()
+      });
+      setNombreLocalidadNueva('');
+      setMostrarNuevaLocalidad(false);
+      alert('Localidad agregada al catálogo. Queda pendiente de asignación.');
+    } catch (e) {
+      alert('No se pudo guardar la localidad: ' + e.message);
+    }
+    setGuardandoLocalidad(false);
+  };
   const localidadSeleccionada = form ? localidadPorId(form.localidadId) : null;
-  const opcionesLocalidad = [React.createElement('option', { key: 'sin-localidad', value: '' }, 'Selecciona una localidad asignada')].concat(localidadesForm.map(localidad => React.createElement('option', { key: localidad.id, value: localidad.id }, localidad.nombre)));
+  const opcionesLocalidad = [React.createElement('option', { key: 'sin-localidad', value: '' }, 'Selecciona una localidad')].concat(localidadesForm.map(localidad => React.createElement('option', { key: localidad.id, value: localidad.id }, localidad.nombre)));
+  const localidadEditor = puedeCrear && mostrarNuevaLocalidad && React.createElement(Modal, { title: 'Nueva localidad', onClose: () => { setNombreLocalidadNueva(''); setMostrarNuevaLocalidad(false); } }, React.createElement('div', { className: 'fx-locality-editor' },
+    React.createElement(Lbl, null, 'Nombre de localidad'),
+    React.createElement(Inp, { value: nombreLocalidadNueva, autoFocus: true, onChange: e => setNombreLocalidadNueva(e.target.value), placeholder: 'Ej. La Morena', onKeyDown: e => { if (e.key === 'Enter') guardarNuevaLocalidad(); } }),
+    React.createElement('div', { className: 'fx-locality-editor-note' }, 'Se agregará al catálogo sin asignarla a un repartidor.'),
+    React.createElement('div', { className: 'fx-locality-editor-actions' }, React.createElement(BOut, { onClick: () => { setNombreLocalidadNueva(''); setMostrarNuevaLocalidad(false); }, style: { flex: 1 } }, 'Cancelar'), React.createElement(BFill, { onClick: guardarNuevaLocalidad, disabled: guardandoLocalidad, style: { flex: 1 } }, guardandoLocalidad ? 'Guardando…' : 'Guardar localidad'))
+  ));
   const editor = form && React.createElement(Modal, { title: form.id ? 'Editar cliente fijo' : 'Nuevo cliente fijo', onClose: () => setForm(null) }, React.createElement('div', { className: 'fx-client-editor' },
     React.createElement(Lbl, null, 'Nombre'),
     React.createElement(Inp, { value: form.nombre || '', autoFocus: true, onChange: e => setForm(actual => ({ ...actual, nombre: e.target.value })), placeholder: 'Nombre del cliente', style: { marginBottom: 10 } }),
-    React.createElement(Lbl, null, 'Localidad asignada'),
+    React.createElement(Lbl, null, 'Localidad'),
     React.createElement('select', { value: form.localidadId || '', onChange: e => setForm(actual => ({ ...actual, localidadId: e.target.value })), className: 'fx-client-editor-select', style: { width: '100%', padding: 10, marginBottom: 10, borderRadius: 8, border: '1px solid var(--line-strong)', background: 'var(--surface)', color: 'var(--ink)' } }, opcionesLocalidad),
-    localidadSeleccionada && React.createElement('div', { className: 'fx-client-editor-assignment', style: { background: 'var(--info-bg)', border: '1px solid var(--line)', borderRadius: 8, padding: 9, marginBottom: 12, fontSize: 11 } }, 'Localidad asignada al repartidor: ', localidadSeleccionada.repartidorNombre || 'Repartidor asignado'),
+    localidadSeleccionada && React.createElement('div', { className: 'fx-client-editor-assignment', style: { background: 'var(--info-bg)', border: '1px solid var(--line)', borderRadius: 8, padding: 9, marginBottom: 12, fontSize: 11 } }, localidadSeleccionada.repartidorNombre ? 'Localidad asignada al repartidor: ' + localidadSeleccionada.repartidorNombre : 'Localidad disponible; queda pendiente de asignación.'),
     React.createElement(Lbl, null, 'Método de servicio'),
     React.createElement('select', { value: form.metodoServicio || METODO_VENTA_CANTIDAD, onChange: e => setForm(actual => ({ ...actual, metodoServicio: e.target.value })), className: 'fx-client-editor-select', style: { width: '100%', padding: 10, marginBottom: 10, borderRadius: 8, border: '1px solid var(--line-strong)', background: 'var(--surface)', color: 'var(--ink)' } }, React.createElement('option', { value: METODO_VENTA_CANTIDAD }, 'Doméstica'), React.createElement('option', { value: METODO_RELLENO_MEDIDO }, 'Medido por medidor')),
     form.metodoServicio === METODO_RELLENO_MEDIDO && React.createElement('div', { className: 'fx-client-editor-service-note', style: { background: 'var(--info-bg)', color: 'var(--info-text)', borderRadius: 8, padding: 9, marginBottom: 10, fontSize: 11, lineHeight: 1.4 } }, 'Este cliente facturará por relleno medido: se capturarán marcador inicial y marcador final en cada servicio.'),
@@ -102,7 +136,7 @@ function Clientes({ clientes = [], notas = [], creditos = [], localidades: local
     React.createElement(Inp, { value: form.telefono || '', inputMode: 'tel', onChange: e => setForm(actual => ({ ...actual, telefono: e.target.value })), placeholder: 'Teléfono del cliente', style: { marginBottom: 10 } }),
     React.createElement(Lbl, null, 'Tarifa'),
     React.createElement('select', { value: form.tarifaId || '', onChange: e => setForm(actual => ({ ...actual, tarifaId: e.target.value })), className: 'fx-client-editor-select', style: { width: '100%', padding: 10, marginBottom: 10, borderRadius: 8, border: '1px solid var(--line-strong)', background: 'var(--surface)', color: 'var(--ink)' } }, React.createElement('option', { value: '' }, tarifas.length ? 'Selecciona una tarifa existente' : 'No hay tarifas activas'), (tarifas || []).filter(tarifa => tarifa.activo !== false).map(tarifa => React.createElement('option', { key: tarifa.id, value: tarifa.id }, tarifa.nombre, ' · $', Number(tarifa.precioUnitario ?? tarifa.precioPorUnidad ?? 0).toFixed(2), ' / ', tarifa.unidadComercial || 'unidad'))),
-    localidadesForm.length === 0 && React.createElement('div', { className: 'fx-client-editor-empty', style: { color: 'var(--warn-text)', fontSize: 11, marginBottom: 12 } }, 'No hay localidades con repartidor asignado disponibles.'),
+    localidadesForm.length === 0 && React.createElement('div', { className: 'fx-client-editor-empty', style: { color: 'var(--warn-text)', fontSize: 11, marginBottom: 12 } }, 'No hay localidades activas en el catálogo.'),
     React.createElement(BFill, { onClick: guardar, style: { width: '100%' } }, 'Guardar cliente')));
   const detalle = detallesFor && React.createElement(Modal, { title: detallesFor.nombre || 'Cliente fijo', onClose: () => setDetallesFor(null) }, React.createElement(FichaRapidaCliente, { cliente: detallesFor, saldo: Number(cmap[detallesFor.id] || 0), historial: historialCliente(detallesFor.id), tarifa: (tarifas || []).find(tarifa => String(tarifa.id) === String(detallesFor.tarifaId || detallesFor.tarifaHabitualId)), puedeEditar, onEditar: () => { setForm({ id: detallesFor.id, nombre: detallesFor.nombre || '', localidadId: detallesFor.localidadId || '', telefono: detallesFor.telefono || '', metodoServicio: detallesFor.metodoServicio || METODO_VENTA_CANTIDAD, tarifaId: detallesFor.tarifaId || detallesFor.tarifaHabitualId || '', activo: detallesFor.activo !== false }); setDetallesFor(null); }, onHistorial: () => { setHistId(detallesFor.id); setDetallesFor(null); } }));
   const abrirPdfServicio = item => { const url = item?.comprobante?.pdfUrl || item?.pdfUrl; if (!url) return alert('Este servicio todavía no tiene un PDF disponible.'); window.open(url, '_blank', 'noopener,noreferrer'); };
@@ -127,11 +161,11 @@ function Clientes({ clientes = [], notas = [], creditos = [], localidades: local
   const opcionesLocalidadFiltro = [{ valor: 'todos', texto: 'Todas las localidades' }, { valor: LOCALIDAD_SIN_CLASIFICAR, texto: 'Sin localidad' }].concat(localidadesVisibles.map(localidad => ({ valor: localidad, texto: localidad })));
   const contarLocalidad = valor => contar(cliente => valor === 'todos' || valor === LOCALIDAD_SIN_CLASIFICAR && !localidadDeCliente(cliente) || claveLocalidad(localidadDeCliente(cliente)) === claveLocalidad(valor));
   return React.createElement('div', { className: 'fx-page-clients' },
-    React.createElement('div', { className: 'fx-clients-heading' }, React.createElement('div', { className: 'fx-clients-title' }, 'Clientes'), puedeCrear && React.createElement(BFill, { onClick: nuevaFicha }, '+ Nuevo')),
+    React.createElement('div', { className: 'fx-clients-heading' }, React.createElement('div', { className: 'fx-clients-title' }, 'Clientes'), puedeCrear && React.createElement('div', { className: 'fx-clients-heading-actions' }, React.createElement(BFill, { onClick: nuevaFicha }, '+ Nuevo cliente'), React.createElement(BOut, { onClick: () => setMostrarNuevaLocalidad(true) }, '+ Nueva localidad'))),
     React.createElement(Inp, { className: 'fx-clientes-search-input', placeholder: 'Buscar cliente o localidad…', value: q, onChange: e => setQ(e.target.value), 'aria-label': 'Buscar cliente o localidad', style: { marginBottom: 14 } }),
     React.createElement('div', { className: 'fx-client-filters', role: 'group', 'aria-label': 'Filtros de clientes' },
       React.createElement(FiltroClientes, { titulo: 'Estado', valor: filtroEstado, onChange: setFiltroEstado, opciones: [{ valor: 'todos', texto: 'Todos' }, { valor: 'activos', texto: 'Activos' }, { valor: 'inactivos', texto: 'Inactivos' }], contar: valor => contar(cliente => valor === 'todos' || valor === 'activos' && cliente.activo !== false || valor === 'inactivos' && cliente.activo === false) }),
       React.createElement(FiltroClientes, { titulo: 'Crédito', valor: filtroCredito, onChange: setFiltroCredito, opciones: [{ valor: 'todos', texto: 'Todos' }, { valor: 'credito', texto: 'Con crédito' }, { valor: 'sin-credito', texto: 'Sin crédito' }], contar: valor => contar(cliente => valor === 'todos' || valor === 'credito' && Number(cmap[cliente.id] || 0) > 0 || valor === 'sin-credito' && Number(cmap[cliente.id] || 0) <= 0) }),
       React.createElement(FiltroClientes, { titulo: 'Localidad', valor: filtroLocalidad, onChange: setFiltroLocalidad, opciones: opcionesLocalidadFiltro, contar: contarLocalidad })),
-    React.createElement('div', { className: 'fx-client-results-count' }, list.length + ' cliente(s) encontrado(s).'), tarjetas, editor, detalle, servicioDetalleModal);
+    React.createElement('div', { className: 'fx-client-results-count' }, list.length + ' cliente(s) encontrado(s).'), tarjetas, localidadEditor, editor, detalle, servicioDetalleModal);
 }

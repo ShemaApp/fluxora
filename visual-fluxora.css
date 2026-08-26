@@ -2822,3 +2822,48 @@ body::before { display: none !important; }
   color: var(--fx-navy) !important;
   font-size: 12px !important;
 }
+
+/* Iteración 36 — Clientes: catálogo de localidades independiente del reparto. */
+.fx-clients-heading-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.fx-clients-heading-actions .fx-btn-fill,
+.fx-clients-heading-actions .fx-btn-outline {
+  min-height: 36px !important;
+  padding: 8px 12px !important;
+  font-size: 11px !important;
+  white-space: nowrap;
+}
+.fx-locality-editor {
+  display: grid;
+  gap: 10px;
+}
+.fx-locality-editor-note {
+  color: var(--fx-ink-soft);
+  background: var(--fx-surface);
+  border: 1px solid var(--fx-line);
+  border-radius: 4px;
+  padding: 9px 10px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+.fx-locality-editor-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+@media (max-width: 767px) {
+  .fx-clients-heading-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+  .fx-clients-heading-actions .fx-btn-fill,
+  .fx-clients-heading-actions .fx-btn-outline {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}
