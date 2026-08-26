@@ -30,4 +30,12 @@ La aplicación se recargó localmente y el login renderizó correctamente. No ha
 
 ## Publicación
 
-El cambio queda preparado para commit y publicación en `origin/main`. No se desplegaron reglas de Firestore o Storage.
+El cambio fue publicado en `origin/main` mediante SSH.
+
+- Commit: `e8f0949ccdc5c7d4eaab3a7facb21c38cf523b2a`
+- [Publicar prueba en GitHub Pages](https://github.com/ShemaApp/fluxora/actions/runs/32976506771): correcto
+- [pages-build-deployment](https://github.com/ShemaApp/fluxora/actions/runs/32976505396): correcto
+- [FLUXORA publicada](https://shemaapp.github.io/fluxora/?client-localities-fix=36)
+- Service worker: `v1.6.11`
+
+No se desplegaron reglas de Firestore o Storage.
