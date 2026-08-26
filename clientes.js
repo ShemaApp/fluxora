@@ -4,6 +4,29 @@ const claveLocalidad = valor => normalizarLocalidad(valor).normalize('NFD').repl
 const METODO_VENTA_CANTIDAD = 'venta_por_cantidad';
 const METODO_RELLENO_MEDIDO = 'relleno_por_medicion';
 const etiquetaMetodoServicio = valor => valor === METODO_RELLENO_MEDIDO ? 'Medido por medidor' : 'Doméstica';
+const claveImportacionCliente = valor => normalizarLocalidad(valor).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+const encabezadoImportacionCliente = valor => claveImportacionCliente(valor).replace(/[^a-z0-9]+/g, ' ').trim();
+const HEADER_IMPORTACION_CLIENTES = {
+  nombre: 'nombre',
+  localidad: 'localidad',
+  'metodo de servicio': 'metodoServicio',
+  telefono: 'telefono',
+  'tarifa habitual': 'tarifaHabitual',
+  estado: 'estado'
+};
+const metodoImportacionCliente = valor => {
+  const clave = encabezadoImportacionCliente(valor);
+  if (clave === 'domestica' || clave === 'venta por cantidad') return METODO_VENTA_CANTIDAD;
+  if (clave === 'medido por medidor' || clave === 'relleno por medicion' || clave === 'medido') return METODO_RELLENO_MEDIDO;
+  return '';
+};
+const estadoImportacionCliente = valor => {
+  const clave = encabezadoImportacionCliente(valor);
+  if (!clave || clave === 'activo' || clave === 'activa') return true;
+  if (clave === 'inactivo' || clave === 'inactiva') return false;
+  return null;
+};
+const csvImportacionCliente = filas => '\uFEFF' + filas.map(fila => fila.map(valor => '"' + String(valor ?? '').replace(/"/g, '""') + '"').join(',')).join('\n');
 
 function FichaRapidaCliente({ cliente, saldo = 0, historial = [], tarifa = null, puedeEditar = false, onEditar, onHistorial }) {
   const moneda = valor => '$' + Number(valor || 0).toFixed(2);
@@ -57,6 +80,9 @@ function Clientes({ clientes = [], notas = [], creditos = [], localidades: local
   const [mostrarNuevaLocalidad, setMostrarNuevaLocalidad] = useState(false);
   const [nombreLocalidadNueva, setNombreLocalidadNueva] = useState('');
   const [guardandoLocalidad, setGuardandoLocalidad] = useState(false);
+  const [importacion, setImportacion] = useState(null);
+  const [importando, setImportando] = useState(false);
+  const archivoImportacionRef = React.useRef(null);
   const cmap = (creditos || []).reduce((mapa, credito) => { const saldo = Number(credito.saldo || 0); if (saldo > 0) mapa[credito.clienteId] = (mapa[credito.clienteId] || 0) + saldo; return mapa; }, {});
   const enAlcance = currentUser.role === 'repartidor' ? clientes.filter(cliente => idsAlcance.has(cliente.localidadId)) : clientes;
   const localidadDeCliente = cliente => normalizarLocalidad(cliente.localidadNombre || cliente.localidad || '');
@@ -115,6 +141,173 @@ function Clientes({ clientes = [], notas = [], creditos = [], localidades: local
     }
     setGuardandoLocalidad(false);
   };
+  const descargarArchivoClientes = (nombre, contenido, tipo) => {
+    const url = URL.createObjectURL(new Blob([contenido], { type: tipo }));
+    const enlace = document.createElement('a');
+    enlace.href = url;
+    enlace.download = nombre;
+    enlace.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+  const nombreLocalidadCliente = cliente => {
+    const localidad = (localidadesCatalogo || []).find(item => String(item.id) === String(cliente.localidadId || ''));
+    return localidad?.nombre || cliente.localidadNombre || cliente.localidad || '';
+  };
+  const nombreTarifaCliente = cliente => {
+    const tarifa = (tarifas || []).find(item => String(item.id) === String(cliente.tarifaId || cliente.tarifaHabitualId || ''));
+    return tarifa?.nombre || cliente.tarifaNombre || '';
+  };
+  const filasExportacionClientes = () => [
+    ['Nombre', 'Localidad', 'Método de servicio', 'Teléfono', 'Tarifa habitual', 'Estado'],
+    ...list.map(cliente => [
+      cliente.nombre || '',
+      nombreLocalidadCliente(cliente),
+      etiquetaMetodoServicio(cliente.metodoServicio),
+      cliente.telefono || '',
+      nombreTarifaCliente(cliente),
+      cliente.activo === false ? 'Inactivo' : 'Activo'
+    ])
+  ];
+  const contextoExportacionClientes = () => [
+    ['Fecha de exportación', new Date().toLocaleString('es-MX')],
+    ['Búsqueda', q.trim() || 'Todas'],
+    ['Estado', filtroEstado === 'todos' ? 'Todos' : filtroEstado === 'activos' ? 'Activos' : 'Inactivos'],
+    ['Crédito', filtroCredito === 'todos' ? 'Todos' : filtroCredito === 'credito' ? 'Con crédito' : 'Sin crédito'],
+    ['Localidad', filtroLocalidad === 'todos' ? 'Todas las localidades' : filtroLocalidad],
+    ['Registros exportados', list.length]
+  ];
+  const exportarClientesCSV = () => descargarArchivoClientes('fluxora-clientes-' + Date.now() + '.csv', csvImportacionCliente(filasExportacionClientes()), 'text/csv;charset=utf-8');
+  const exportarClientesExcel = () => {
+    if (typeof XLSX === 'undefined') return exportarClientesCSV();
+    const libro = XLSX.utils.book_new();
+    const clientesHoja = XLSX.utils.aoa_to_sheet(filasExportacionClientes());
+    clientesHoja['!cols'] = [{ wch: 28 }, { wch: 24 }, { wch: 24 }, { wch: 16 }, { wch: 24 }, { wch: 12 }];
+    clientesHoja['!autofilter'] = { ref: 'A1:F' + Math.max(1, list.length + 1) };
+    XLSX.utils.book_append_sheet(libro, clientesHoja, 'Clientes');
+    const filtrosHoja = XLSX.utils.aoa_to_sheet([['Filtros aplicados', 'Valor'], ...contextoExportacionClientes()]);
+    XLSX.utils.book_append_sheet(libro, filtrosHoja, 'Filtros aplicados');
+    XLSX.writeFile(libro, 'fluxora-clientes-' + Date.now() + '.xlsx');
+  };
+  const descargarPlantillaClientes = () => {
+    const filas = [
+      ['Nombre', 'Localidad', 'Método de servicio', 'Teléfono', 'Tarifa habitual', 'Estado']
+    ];
+    if (typeof XLSX === 'undefined') return descargarArchivoClientes('plantilla-clientes.csv', csvImportacionCliente(filas), 'text/csv;charset=utf-8');
+    const libro = XLSX.utils.book_new();
+    const hoja = XLSX.utils.aoa_to_sheet(filas);
+    hoja['!cols'] = [{ wch: 28 }, { wch: 24 }, { wch: 24 }, { wch: 16 }, { wch: 24 }, { wch: 12 }];
+    XLSX.utils.book_append_sheet(libro, hoja, 'Clientes');
+    XLSX.writeFile(libro, 'plantilla-clientes.xlsx');
+  };
+  const leerArchivoClientes = async event => {
+    const archivo = event.target.files?.[0];
+    event.target.value = '';
+    if (!archivo) return;
+    if (typeof XLSX === 'undefined') return alert('No se pudo leer el archivo porque la librería de Excel no está disponible.');
+    try {
+      const libro = XLSX.read(await archivo.arrayBuffer(), { type: 'array' });
+      const primeraHoja = libro.SheetNames?.[0];
+      const hoja = primeraHoja ? libro.Sheets[primeraHoja] : null;
+      const matriz = hoja ? XLSX.utils.sheet_to_json(hoja, { header: 1, defval: '', raw: false }) : [];
+      const encabezados = (matriz[0] || []).map(valor => String(valor ?? '').trim());
+      const indices = {};
+      const encabezadosDesconocidos = [];
+      const encabezadosDuplicados = [];
+      encabezados.forEach((valor, indice) => {
+        const campo = HEADER_IMPORTACION_CLIENTES[encabezadoImportacionCliente(valor)];
+        if (!campo) {
+          if (valor) encabezadosDesconocidos.push(valor);
+          return;
+        }
+        if (Object.prototype.hasOwnProperty.call(indices, campo)) encabezadosDuplicados.push(valor);
+        else indices[campo] = indice;
+      });
+      const camposObligatorios = ['nombre', 'localidad', 'metodoServicio', 'tarifaHabitual'];
+      const camposFaltantes = camposObligatorios.filter(campo => !Object.prototype.hasOwnProperty.call(indices, campo));
+      const filasDatos = matriz.slice(1).filter(fila => fila.some(valor => String(valor ?? '').trim()));
+      const erroresArchivo = [];
+      if (!primeraHoja) erroresArchivo.push('El archivo no contiene hojas.');
+      if (!encabezados.length) erroresArchivo.push('La primera fila debe contener los encabezados.');
+      if (camposFaltantes.length) erroresArchivo.push('Faltan columnas obligatorias: ' + camposFaltantes.map(campo => campo === 'metodoServicio' ? 'Método de servicio' : campo === 'tarifaHabitual' ? 'Tarifa habitual' : campo === 'nombre' ? 'Nombre' : 'Localidad').join(', ') + '.');
+      if (encabezadosDuplicados.length) erroresArchivo.push('Hay encabezados duplicados: ' + encabezadosDuplicados.join(', ') + '.');
+      if (!filasDatos.length && !erroresArchivo.length) erroresArchivo.push('El archivo no contiene filas de clientes.');
+      const filas = [];
+      const clavesArchivo = new Set();
+      if (!erroresArchivo.length) filasDatos.forEach((fila, indice) => {
+        const valor = campo => Object.prototype.hasOwnProperty.call(indices, campo) ? String(fila[indices[campo]] ?? '').trim() : '';
+        const nombre = normalizarLocalidad(valor('nombre'));
+        const localidadTexto = normalizarLocalidad(valor('localidad'));
+        const metodoServicio = metodoImportacionCliente(valor('metodoServicio'));
+        const tarifaTexto = normalizarLocalidad(valor('tarifaHabitual'));
+        const telefono = valor('telefono');
+        const estado = Object.prototype.hasOwnProperty.call(indices, 'estado') ? estadoImportacionCliente(valor('estado')) : true;
+        const errores = [];
+        const advertencias = [];
+        if (!nombre) errores.push('Nombre vacío.');
+        const localidad = localidadesActivas.find(item => claveLocalidad(item.nombre) === claveLocalidad(localidadTexto));
+        if (!localidad) errores.push('Localidad inexistente: ' + (localidadTexto || 'sin valor') + '.');
+        if (!metodoServicio) errores.push('Método de servicio inválido. Usa Doméstica o Medido por medidor.');
+        const tarifa = (tarifas || []).find(item => item.activo !== false && claveImportacionCliente(item.nombre) === claveImportacionCliente(tarifaTexto));
+        if (!tarifa) errores.push('Tarifa activa inexistente: ' + (tarifaTexto || 'sin valor') + '.');
+        if (estado === null) errores.push('Estado inválido. Usa Activo o Inactivo.');
+        const claveFila = claveImportacionCliente(nombre) + '|' + claveLocalidad(localidadTexto);
+        if (clavesArchivo.has(claveFila)) advertencias.push('Duplicado dentro del archivo.');
+        clavesArchivo.add(claveFila);
+        if (localidad) {
+          const existente = (clientes || []).find(cliente => claveImportacionCliente(cliente.nombre) === claveImportacionCliente(nombre) && (String(cliente.localidadId || '') === String(localidad.id) || claveLocalidad(cliente.localidadNombre || cliente.localidad) === claveLocalidad(localidad.nombre)));
+          if (existente) advertencias.push('Posible duplicado de cliente existente.');
+        }
+        filas.push({ numero: indice + 2, nombre, localidadTexto, metodoServicio, telefono, tarifaTexto, estado, errores, advertencias, localidad, tarifa, estadoFila: errores.length || advertencias.length ? 'revisar' : 'lista' });
+      });
+      const conteoClaves = filas.reduce((conteo, fila) => {
+        const clave = claveImportacionCliente(fila.nombre) + '|' + claveLocalidad(fila.localidadTexto);
+        conteo[clave] = (conteo[clave] || 0) + 1;
+        return conteo;
+      }, {});
+      filas.forEach(fila => {
+        const clave = claveImportacionCliente(fila.nombre) + '|' + claveLocalidad(fila.localidadTexto);
+        if (conteoClaves[clave] > 1 && !fila.advertencias.includes('Duplicado dentro del archivo.')) fila.advertencias.push('Duplicado dentro del archivo.');
+        if (!fila.errores.length && fila.advertencias.length) fila.estadoFila = 'revisar';
+      });
+      setImportacion({ archivo: archivo.name, erroresArchivo, encabezadosDesconocidos, encabezadosDuplicados, filas, totalFilas: filasDatos.length });
+    } catch (error) {
+      setImportacion({ archivo: archivo.name, erroresArchivo: ['No se pudo leer el archivo: ' + (error.message || 'formato no reconocido') + '.'], encabezadosDesconocidos: [], encabezadosDuplicados: [], filas: [], totalFilas: 0 });
+    }
+  };
+  const filasImportables = importacion?.filas?.filter(fila => fila.estadoFila === 'lista') || [];
+  const importarClientesValidados = async () => {
+    if (!filasImportables.length || importando) return;
+    setImportando(true);
+    try {
+      for (let inicio = 0; inicio < filasImportables.length; inicio += 450) {
+        const grupo = filasImportables.slice(inicio, inicio + 450);
+        const lote = db.batch();
+        grupo.forEach(fila => {
+          const referencia = db.collection(COLECCIONES.CLIENTES).doc();
+          lote.set(referencia, { nombre: fila.nombre, localidadId: fila.localidad.id, localidadNombre: fila.localidad.nombre, localidad: fila.localidad.nombre, telefono: fila.telefono, metodoServicio: fila.metodoServicio, tarifaId: fila.tarifa.id, tarifaHabitualId: fila.tarifa.id, activo: fila.estado !== false, creadoPorUid: currentUser.uid, creadoPorNombre: currentUser.nombre || '', fechaAlta: new Date().toISOString(), origenImportacion: 'clientes_excel' });
+        });
+        await lote.commit();
+      }
+      setImportacion(null);
+      alert(filasImportables.length + ' cliente(s) importado(s). Las filas con errores o advertencias no se guardaron.');
+    } catch (error) {
+      alert('No se pudo completar la importación: ' + (error.message || 'error desconocido'));
+    } finally {
+      setImportando(false);
+    }
+  };
+  const filasConError = importacion?.filas?.filter(fila => fila.errores.length) || [];
+  const filasConAdvertencia = importacion?.filas?.filter(fila => !fila.errores.length && fila.advertencias.length) || [];
+  const importacionEditor = puedeCrear && importacion && React.createElement(Modal, { title: 'Revisar importación', onClose: () => { if (!importando) setImportacion(null); } }, React.createElement('div', { className: 'fx-import-review' },
+    React.createElement('div', { className: 'fx-import-warning', role: 'alert' }, React.createElement('strong', null, 'Antes de importar: '), 'se crearán solo clientes nuevos con localidades y tarifas existentes. No se generarán IDs manuales ni se sobrescribirán clientes, saldos, ventas o historiales. Revisa las filas antes de confirmar.'),
+    React.createElement('div', { className: 'fx-import-file-name' }, importacion.archivo || 'Archivo seleccionado'),
+    importacion.erroresArchivo?.length ? React.createElement('div', { className: 'fx-import-file-errors' }, importacion.erroresArchivo.map((error, indice) => React.createElement('div', { key: indice }, error))) : null,
+    importacion.encabezadosDesconocidos?.length ? React.createElement('div', { className: 'fx-import-file-warning' }, 'Columnas no reconocidas; no se importarán: ', importacion.encabezadosDesconocidos.join(', '), '.') : null,
+    React.createElement('div', { className: 'fx-import-summary' }, React.createElement('span', null, 'Filas: ', importacion.totalFilas || 0), React.createElement('span', { className: 'fx-import-summary-ok' }, 'Listas: ', filasImportables.length), React.createElement('span', { className: 'fx-import-summary-warning' }, 'Revisar: ', filasConError.length + filasConAdvertencia.length)),
+    importacion.filas?.length ? React.createElement('div', { className: 'fx-import-preview-list' }, importacion.filas.slice(0, 20).map(fila => React.createElement('div', { key: fila.numero, className: 'fx-import-preview-row' }, React.createElement('div', { className: 'fx-import-preview-main' }, React.createElement('strong', null, 'Fila ', fila.numero, ' · ', fila.nombre || 'Sin nombre'), React.createElement('span', null, fila.localidadTexto || 'Sin localidad', ' · ', fila.tarifaTexto || 'Sin tarifa')), React.createElement('div', { className: fila.errores.length ? 'fx-import-row-error' : fila.advertencias.length ? 'fx-import-row-warning' : 'fx-import-row-ok' }, fila.errores.length ? fila.errores.join(' ') : fila.advertencias.length ? fila.advertencias.join(' ') : 'Lista para crear')))) : null,
+    (importacion.filas?.length || 0) > 20 ? React.createElement('div', { className: 'fx-import-more' }, 'Se muestran las primeras 20 filas. La confirmación aplicará todas las filas listas.') : null,
+    React.createElement('div', { className: 'fx-import-actions' }, React.createElement(BOut, { onClick: () => { if (!importando) setImportacion(null); }, style: { flex: 1 } }, 'Cancelar'), React.createElement(BFill, { onClick: importarClientesValidados, disabled: importando || !filasImportables.length, style: { flex: 1 } }, importando ? 'Importando…' : 'Importar ' + filasImportables.length + ' lista(s)'))
+  ));
   const localidadSeleccionada = form ? localidadPorId(form.localidadId) : null;
   const opcionesLocalidad = [React.createElement('option', { key: 'sin-localidad', value: '' }, 'Selecciona una localidad')].concat(localidadesForm.map(localidad => React.createElement('option', { key: localidad.id, value: localidad.id }, localidad.nombre)));
   const localidadEditor = puedeCrear && mostrarNuevaLocalidad && React.createElement(Modal, { title: 'Nueva localidad', onClose: () => { setNombreLocalidadNueva(''); setMostrarNuevaLocalidad(false); } }, React.createElement('div', { className: 'fx-locality-editor' },
@@ -136,6 +329,8 @@ function Clientes({ clientes = [], notas = [], creditos = [], localidades: local
     React.createElement(Inp, { value: form.telefono || '', inputMode: 'tel', onChange: e => setForm(actual => ({ ...actual, telefono: e.target.value })), placeholder: 'Teléfono del cliente', style: { marginBottom: 10 } }),
     React.createElement(Lbl, null, 'Tarifa'),
     React.createElement('select', { value: form.tarifaId || '', onChange: e => setForm(actual => ({ ...actual, tarifaId: e.target.value })), className: 'fx-client-editor-select', style: { width: '100%', padding: 10, marginBottom: 10, borderRadius: 8, border: '1px solid var(--line-strong)', background: 'var(--surface)', color: 'var(--ink)' } }, React.createElement('option', { value: '' }, tarifas.length ? 'Selecciona una tarifa existente' : 'No hay tarifas activas'), (tarifas || []).filter(tarifa => tarifa.activo !== false).map(tarifa => React.createElement('option', { key: tarifa.id, value: tarifa.id }, tarifa.nombre, ' · $', Number(tarifa.precioUnitario ?? tarifa.precioPorUnidad ?? 0).toFixed(2), ' / ', tarifa.unidadComercial || 'unidad'))),
+    React.createElement(Lbl, null, 'Estado'),
+    React.createElement('select', { value: form.activo === false ? 'inactivo' : 'activo', onChange: e => setForm(actual => ({ ...actual, activo: e.target.value !== 'inactivo' })), className: 'fx-client-editor-select', style: { width: '100%', padding: 10, marginBottom: 10, borderRadius: 8, border: '1px solid var(--line-strong)', background: 'var(--surface)', color: 'var(--ink)' } }, React.createElement('option', { value: 'activo' }, 'Activo'), React.createElement('option', { value: 'inactivo' }, 'Inactivo')),
     localidadesForm.length === 0 && React.createElement('div', { className: 'fx-client-editor-empty', style: { color: 'var(--warn-text)', fontSize: 11, marginBottom: 12 } }, 'No hay localidades activas en el catálogo.'),
     React.createElement(BFill, { onClick: guardar, style: { width: '100%' } }, 'Guardar cliente')));
   const detalle = detallesFor && React.createElement(Modal, { title: detallesFor.nombre || 'Cliente fijo', onClose: () => setDetallesFor(null) }, React.createElement(FichaRapidaCliente, { cliente: detallesFor, saldo: Number(cmap[detallesFor.id] || 0), historial: historialCliente(detallesFor.id), tarifa: (tarifas || []).find(tarifa => String(tarifa.id) === String(detallesFor.tarifaId || detallesFor.tarifaHabitualId)), puedeEditar, onEditar: () => { setForm({ id: detallesFor.id, nombre: detallesFor.nombre || '', localidadId: detallesFor.localidadId || '', telefono: detallesFor.telefono || '', metodoServicio: detallesFor.metodoServicio || METODO_VENTA_CANTIDAD, tarifaId: detallesFor.tarifaId || detallesFor.tarifaHabitualId || '', activo: detallesFor.activo !== false }); setDetallesFor(null); }, onHistorial: () => { setHistId(detallesFor.id); setDetallesFor(null); } }));
@@ -162,10 +357,17 @@ function Clientes({ clientes = [], notas = [], creditos = [], localidades: local
   const contarLocalidad = valor => contar(cliente => valor === 'todos' || valor === LOCALIDAD_SIN_CLASIFICAR && !localidadDeCliente(cliente) || claveLocalidad(localidadDeCliente(cliente)) === claveLocalidad(valor));
   return React.createElement('div', { className: 'fx-page-clients' },
     React.createElement('div', { className: 'fx-clients-heading' }, React.createElement('div', { className: 'fx-clients-title' }, 'Clientes'), puedeCrear && React.createElement('div', { className: 'fx-clients-heading-actions' }, React.createElement(BFill, { onClick: nuevaFicha }, '+ Nuevo cliente'), React.createElement(BOut, { onClick: () => setMostrarNuevaLocalidad(true) }, '+ Nueva localidad'))),
+    puedeCrear && React.createElement('div', { className: 'fx-client-data-tools', 'aria-label': 'Importación y exportación de clientes' },
+      React.createElement('input', { ref: archivoImportacionRef, type: 'file', accept: '.xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel', onChange: leerArchivoClientes, className: 'fx-client-file-input', 'aria-label': 'Seleccionar archivo de clientes' }),
+      React.createElement(BOut, { onClick: () => archivoImportacionRef.current?.click() }, 'Importar clientes'),
+      React.createElement(BOut, { onClick: descargarPlantillaClientes }, 'Descargar plantilla'),
+      React.createElement(BOut, { onClick: exportarClientesExcel }, 'Exportar Excel (', list.length, ')'),
+      React.createElement(BOut, { onClick: exportarClientesCSV }, 'Exportar CSV (', list.length, ')')
+    ),
     React.createElement(Inp, { className: 'fx-clientes-search-input', placeholder: 'Buscar cliente o localidad…', value: q, onChange: e => setQ(e.target.value), 'aria-label': 'Buscar cliente o localidad', style: { marginBottom: 14 } }),
     React.createElement('div', { className: 'fx-client-filters', role: 'group', 'aria-label': 'Filtros de clientes' },
       React.createElement(FiltroClientes, { titulo: 'Estado', valor: filtroEstado, onChange: setFiltroEstado, opciones: [{ valor: 'todos', texto: 'Todos' }, { valor: 'activos', texto: 'Activos' }, { valor: 'inactivos', texto: 'Inactivos' }], contar: valor => contar(cliente => valor === 'todos' || valor === 'activos' && cliente.activo !== false || valor === 'inactivos' && cliente.activo === false) }),
       React.createElement(FiltroClientes, { titulo: 'Crédito', valor: filtroCredito, onChange: setFiltroCredito, opciones: [{ valor: 'todos', texto: 'Todos' }, { valor: 'credito', texto: 'Con crédito' }, { valor: 'sin-credito', texto: 'Sin crédito' }], contar: valor => contar(cliente => valor === 'todos' || valor === 'credito' && Number(cmap[cliente.id] || 0) > 0 || valor === 'sin-credito' && Number(cmap[cliente.id] || 0) <= 0) }),
       React.createElement(FiltroClientes, { titulo: 'Localidad', valor: filtroLocalidad, onChange: setFiltroLocalidad, opciones: opcionesLocalidadFiltro, contar: contarLocalidad })),
-    React.createElement('div', { className: 'fx-client-results-count' }, list.length + ' cliente(s) encontrado(s).'), tarjetas, localidadEditor, editor, detalle, servicioDetalleModal);
+    React.createElement('div', { className: 'fx-client-results-count' }, list.length + ' cliente(s) encontrado(s).'), tarjetas, localidadEditor, importacionEditor, editor, detalle, servicioDetalleModal);
 }
