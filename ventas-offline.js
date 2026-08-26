@@ -9,7 +9,7 @@
   'use strict';
 
   const DB_NAME = 'app-offline-ventas-agua-v2';
-  const DB_VERSION = 1;
+  const DB_VERSION = 2;
   const STORE = 'ventas_agua';
   const RETRY_STATES = ['pendiente', 'reintentando'];
   let dbOpenPromise = null;
@@ -20,36 +20,65 @@
     try { return global.auth?.currentUser?.uid || global.firebase?.auth?.().currentUser?.uid || null; } catch (e) { return null; }
   };
 
+  const resetDbConnection = () => { dbOpenPromise = null; };
+
   const openDb = () => {
     if (dbOpenPromise) return dbOpenPromise;
     dbOpenPromise = new Promise((resolve, reject) => {
       if (!('indexedDB' in global)) {
+        resetDbConnection();
         reject(new Error('Este dispositivo no ofrece almacenamiento local IndexedDB'));
         return;
       }
       const request = global.indexedDB.open(DB_NAME, DB_VERSION);
-      request.onerror = () => reject(request.error || new Error('No se pudo abrir la cola local'));
+      request.onerror = () => {
+        resetDbConnection();
+        reject(request.error || new Error('No se pudo abrir la cola local'));
+      };
       request.onupgradeneeded = event => {
         const localDb = event.target.result;
-        if (localDb.objectStoreNames.contains(STORE)) localDb.deleteObjectStore(STORE);
-        localDb.createObjectStore(STORE, { keyPath: 'id' });
+        // Nunca se elimina el object store durante una migración: la cola
+        // pendiente debe sobrevivir a las actualizaciones de la aplicación.
+        if (!localDb.objectStoreNames.contains(STORE)) localDb.createObjectStore(STORE, { keyPath: 'id' });
       };
-      request.onsuccess = () => resolve(request.result);
+      request.onsuccess = () => {
+        const localDb = request.result;
+        localDb.onversionchange = () => {
+          localDb.close();
+          resetDbConnection();
+        };
+        localDb.onclose = resetDbConnection;
+        resolve(localDb);
+      };
     });
     return dbOpenPromise;
   };
 
-  const withStore = async (mode, action) => {
+  const withStore = async (mode, action, intento = 0) => {
     const localDb = await openDb();
-    return new Promise((resolve, reject) => {
-      const tx = localDb.transaction(STORE, mode);
-      const store = tx.objectStore(STORE);
-      let result;
-      try { result = action(store); } catch (e) { reject(e); return; }
-      tx.oncomplete = () => resolve(result);
-      tx.onerror = () => reject(tx.error || new Error('Error en la cola local'));
-      tx.onabort = () => reject(tx.error || new Error('Operación local cancelada'));
-    });
+    try {
+      return await new Promise((resolve, reject) => {
+        let tx;
+        try {
+          tx = localDb.transaction(STORE, mode);
+          const store = tx.objectStore(STORE);
+          const result = action(store);
+          tx.oncomplete = () => resolve(result);
+          tx.onerror = () => reject(tx.error || new Error('Error en la cola local'));
+          tx.onabort = () => reject(tx.error || new Error('Operación local cancelada'));
+        } catch (error) {
+          reject(error);
+        }
+      });
+    } catch (error) {
+      const textoError = String(error?.name || '') + ' ' + String(error?.message || '');
+      const conexionCerrada = /InvalidStateError|TransactionInactiveError|closed|closing|connection/i.test(textoError);
+      if (conexionCerrada && intento === 0) {
+        resetDbConnection();
+        return withStore(mode, action, 1);
+      }
+      throw error;
+    }
   };
 
   const requestResult = request => new Promise((resolve, reject) => {

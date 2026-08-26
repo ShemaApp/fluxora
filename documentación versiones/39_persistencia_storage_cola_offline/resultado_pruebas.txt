@@ -1,0 +1,25 @@
+TAP version 13
+# Subtest: solicita persistencia y expone cuota cuando el navegador la concede
+ok 1 - solicita persistencia y expone cuota cuando el navegador la concede
+  ---
+  duration_ms: 24.155899
+  ...
+# Subtest: no bloquea la sesión cuando el navegador rechaza persistencia
+ok 2 - no bloquea la sesión cuando el navegador rechaza persistencia
+  ---
+  duration_ms: 0.898887
+  ...
+# Subtest: respeta una persistencia ya concedida sin solicitarla de nuevo
+ok 3 - respeta una persistencia ya concedida sin solicitarla de nuevo
+  ---
+  duration_ms: 0.864949
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 3
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 35.672565

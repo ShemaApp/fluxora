@@ -9,6 +9,7 @@ function useSesion() {
   const [firestoreError, setFirestoreError] = useState(null);
   const [locked, setLocked] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [storageStatus, setStorageStatus] = useState(() => typeof appObtenerEstadoAlmacenamiento === 'function' ? appObtenerEstadoAlmacenamiento() : { verificado: false, soportado: false, persistente: false });
   const [productos, setProductos] = useState([]);
   const [clientes, setClientes] = useState([]);
   const [localidades, setLocalidades] = useState([]);
@@ -50,6 +51,33 @@ function useSesion() {
 
   useEffect(() => {
     setLocked(currentUser ? !!localStorage.getItem(pinKey(currentUser.uid)) : false);
+  }, [currentUser?.uid]);
+
+  useEffect(() => {
+    if (!currentUser) return undefined;
+    let activo = true;
+    const recibirEstado = event => {
+      if (activo && event?.detail) setStorageStatus(event.detail);
+    };
+    window.addEventListener('fluxora:almacenamiento-estado', recibirEstado);
+    const prepararSesionLocal = async () => {
+      try {
+        if (typeof appSolicitarAlmacenamientoPersistente === 'function') {
+          const resultado = await appSolicitarAlmacenamientoPersistente();
+          if (activo) setStorageStatus(resultado);
+        }
+      } catch (error) {
+        if (activo) setStorageStatus(previous => ({ ...previous, verificado: true, persistente: false, error: error?.message || 'No se pudo preparar el almacenamiento local' }));
+      }
+      if (activo && navigator.onLine && typeof appSincronizarVentasOffline === 'function') {
+        setTimeout(() => appSincronizarVentasOffline().catch(() => {}), 250);
+      }
+    };
+    prepararSesionLocal();
+    return () => {
+      activo = false;
+      window.removeEventListener('fluxora:almacenamiento-estado', recibirEstado);
+    };
   }, [currentUser?.uid]);
 
   useEffect(() => {
@@ -284,7 +312,7 @@ function useSesion() {
   return {
     currentUser, authChecked, firestoreError,
     locked, setLocked,
-    isOnline,
+    isOnline, storageStatus,
     productos, clientes, localidades, notas, creditos, jornadas, cargasAgua, medicion, tarifas, vehiculos, medidores, servicios, comprobantes,
     pendCounts, totalPendientes,
   };

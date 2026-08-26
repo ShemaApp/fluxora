@@ -2,7 +2,7 @@ function App() {
   const {
     currentUser, authChecked, firestoreError,
     locked, setLocked,
-    isOnline,
+    isOnline, storageStatus,
     productos, clientes, localidades, notas, creditos, jornadas, cargasAgua, medicion, tarifas, vehiculos, medidores, servicios, comprobantes,
     pendCounts, totalPendientes,
   } = useSesion();
@@ -89,7 +89,8 @@ function App() {
     onUsePassword: () => auth.signOut()
   });
   const pendientesTotales = totalPendientes + Number(offlineVentaResumen.pendientes || 0);
-  const mostrarBanner = !isOnline || pendientesTotales > 0;
+  const persistenciaNoDisponible = storageStatus?.verificado && storageStatus.persistente !== true;
+  const mostrarBanner = !isOnline || pendientesTotales > 0 || persistenciaNoDisponible;
   return React.createElement("div", {
     className: 'app-shell',
     style: {
@@ -231,7 +232,7 @@ function App() {
       padding: '6px 12px',
       boxSizing: 'border-box'
     }
-  }, isOnline ? `Sincronizando ${pendientesTotales} cambio${pendientesTotales === 1 ? '' : 's'}…` : `Sin conexión — puedes seguir trabajando, se sincroniza solo${pendientesTotales > 0 ? ` (${pendientesTotales} en cola)` : ''}`), React.createElement("main", {
+  }, !isOnline ? `Sin conexión — puedes seguir trabajando, se sincroniza solo${pendientesTotales > 0 ? ` (${pendientesTotales} en cola)` : ''}` : pendientesTotales > 0 ? `Sincronizando ${pendientesTotales} cambio${pendientesTotales === 1 ? '' : 's'}…${persistenciaNoDisponible ? ' · almacenamiento no persistente' : ''}` : 'Almacenamiento local no persistente: evita borrar los datos del sitio'), React.createElement("main", {
     className: 'app-main-content'
   }, firestoreError && React.createElement("div", {
     style: {
