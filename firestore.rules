@@ -154,6 +154,13 @@ service cloud.firestore {
       allow create: if autenticado() && request.resource.data.tipo == 'nota_servicio' && request.resource.data.estado == 'completado' && request.resource.data.servicioId is string && request.resource.data.servicioId != '' && request.resource.data.createdByUid == request.auth.uid && request.resource.data.pdfPath is string && request.resource.data.pdfPath != '' && request.resource.data.pdfUrl is string && request.resource.data.pdfUrl != '' && getAfter(/databases/$(database)/documents/servicios/$(request.resource.data.servicioId)).data.estado == 'completado' && getAfter(/databases/$(database)/documents/servicios/$(request.resource.data.servicioId)).data.createdByUid == request.auth.uid && getAfter(/databases/$(database)/documents/servicios/$(request.resource.data.servicioId)).data.comprobanteId == request.resource.data.comprobanteId && getAfter(/databases/$(database)/documents/servicios/$(request.resource.data.servicioId)).data.pdfPath == request.resource.data.pdfPath && getAfter(/databases/$(database)/documents/servicios/$(request.resource.data.servicioId)).data.pdfUrl == request.resource.data.pdfUrl;
       allow update, delete: if false;
     }
+    // snapshots de conciliación: solo lectura para ADMIN; la función de
+    // backend escribe el registro y el cliente nunca puede alterarlo.
+    match /conciliaciones_jornada/{id} {
+      allow read: if esAdmin();
+      allow create, update, delete: if false;
+    }
+
     // _meta: control interno. La configuración de medición es administrativa;
     // el repartidor solo puede leerla para operar y nunca modificarla.
     match /_meta/{id} {
