@@ -47,9 +47,15 @@ No hubo una sesión Firebase autenticada disponible en el navegador de prueba. P
 
 La versión de caché se actualizó una sola vez de `v1.6.9` a `v1.6.10`. Todos los archivos JavaScript y CSS modificados ya estaban incluidos en `APP_SHELL`; no fue necesario agregar rutas nuevas a la precaché.
 
+## Publicación verificada
+
+La implementación visual quedó publicada en el commit `b5b4647e07d089f572422b2e56d5f93009fc9825` de `origin/main`. Los dos workflows asociados terminaron con `success`: [pages build and deployment](https://github.com/ShemaApp/fluxora/actions/runs/32914830314) y [Publicar prueba en GitHub Pages](https://github.com/ShemaApp/fluxora/actions/runs/32914831365).
+
+La comprobación remota encontró `v1.6.10` en `https://shemaapp.github.io/fluxora/sw.js` y el bloque de Iteración 32 en `visual-fluxora.css`. El worktree local quedó limpio tras el push.
+
 ## Resultado
 
-La auditoría visual queda lista para publicación. El siguiente paso de la validación es confirmar el commit remoto, los workflows de GitHub Pages, la versión `v1.6.10` en `sw.js` y el estado limpio del worktree.
+La auditoría visual queda publicada y lista para revisión en [FLUXORA en GitHub Pages](https://shemaapp.github.io/fluxora/). La documentación de criterios, hallazgos y validación se encuentra dentro de esta carpeta de versión.
 
 ## Referencias
 
