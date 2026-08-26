@@ -229,6 +229,7 @@ function PinLock({
     }
   };
   return React.createElement("div", {
+    className: 'fx-pin-lock',
     style: {
       minHeight: '100vh',
       display: 'flex',
@@ -239,11 +240,6 @@ function PinLock({
       background: 'var(--bg)'
     }
   }, React.createElement("div", {
-    style: {
-      fontSize: 36,
-      marginBottom: 6
-    }
-  }, "🔒"), React.createElement("div", {
     style: {
       fontSize: 15,
       fontWeight: 700,

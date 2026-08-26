@@ -100,16 +100,19 @@ function Creditos({
     setCorrigiendo(false);
   };
   return React.createElement("div", {
+    className: 'fx-page-credits',
     style: {
       padding: '16px 12px'
     }
   }, React.createElement("div", {
+    className: 'fx-credits-heading',
     style: {
       fontSize: 20,
       fontWeight: 800,
       marginBottom: 12
     }
   }, "Créditos"), React.createElement(Card, {
+    className: 'fx-credit-summary',
     style: {
       borderLeft: '3px solid var(--warn-text)',
       marginBottom: 14
@@ -137,7 +140,8 @@ function Creditos({
       fontSize: 14,
       paddingTop: 20
     }
-  }, "Sin créditos pendientes ✅"), pend.map(c => React.createElement(Card, {
+  }, "Sin créditos pendientes"), pend.map(c => React.createElement(Card, {
+    className: 'fx-credit-record',
     key: c.id
   }, React.createElement(Row, {
     style: {
@@ -242,7 +246,7 @@ function Creditos({
         fontSize: 9,
         padding: '1px 5px'
       }
-    }, '💵'), React.createElement("span", {
+    }, 'Efectivo'), React.createElement("span", {
       style: {
         color: 'var(--ok-text)',
         fontWeight: 700
@@ -307,7 +311,7 @@ function Creditos({
         padding: '5px 8px',
         fontSize: 11
       }
-    }, "✏️ Corregir"), React.createElement(BOut, {
+    }, "Corregir"), React.createElement(BOut, {
       onClick: () => eliminarAbono(c, i),
       color: "var(--danger-text)",
       style: {
@@ -315,13 +319,13 @@ function Creditos({
         padding: '5px 8px',
         fontSize: 11
       }
-    }, "🗑️ Eliminar"))));
+    }, "Eliminar"))));
   })), puedeEditar && (abonoId === c.id ? React.createElement("div", null, React.createElement(Row, {
     style: {
       gap: 6,
       marginBottom: 6
     }
-  }, [['efectivo', '💵 Efectivo', 'var(--ok-bg)', 'var(--ok-text)']].map(([v, l, bg, col]) => React.createElement("button", {
+  }, [['efectivo', 'Efectivo', 'var(--ok-bg)', 'var(--ok-text)']].map(([v, l, bg, col]) => React.createElement("button", {
     key: v,
     onClick: () => setFormaPagoAbono(v),
     style: {

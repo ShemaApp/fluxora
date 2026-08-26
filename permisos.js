@@ -43,7 +43,7 @@ function Permisos({
       }
     }, "Solo un administrador puede gestionar permisos.");
   }
-  return React.createElement("div", null, React.createElement("div", {
+  return React.createElement("div", { className: 'fx-permissions' }, React.createElement("div", {
     style: {
       fontSize: 11,
       color: 'var(--ink-faint)',

@@ -99,7 +99,7 @@ function Configuracion({
         new_: '',
         conf: ''
       });
-      flash('✅ Contraseña actualizada');
+      flash('Contraseña actualizada');
     } catch (e) {
       flash('Contraseña actual incorrecta', true);
     }
@@ -115,7 +115,7 @@ function Configuracion({
           nombre: form.nombre,
           role: form.role
         });
-        flash('✅ Usuario actualizado');
+        flash('Usuario actualizado');
       } else {
         if (form.password.length < 6) {
           flash('La contraseña debe tener mínimo 6 caracteres', true);
@@ -130,7 +130,7 @@ function Configuracion({
           role: form.role
         });
         await secAuth.signOut();
-        flash('✅ Usuario creado');
+        flash('Usuario creado');
       }
       setForm(null);
     } catch (e) {
@@ -163,7 +163,7 @@ function Configuracion({
         return;
       }
       await savePin(currentUser.uid, val);
-      flash('✅ PIN configurado');
+      flash('PIN configurado');
       setPinStep('idle');
       setPinDigits('');
     }
@@ -177,27 +177,14 @@ function Configuracion({
     style: {
       padding: '16px 12px'
     }
-  }, React.createElement(Row, {
-    style: {
-      marginBottom: 16
-    }
-  }, React.createElement("button", {
-    onClick: onBack,
-    style: {
-      background: 'none',
-      border: 'none',
-      color: 'var(--ink-soft)',
-      cursor: 'pointer',
-      fontSize: 22,
-      padding: '0 4px 0 0',
-      lineHeight: 1
-    }
-  }, "←"), React.createElement("div", {
+  }, React.createElement("div", {
+    className: 'fx-config-heading',
     style: {
       fontSize: 20,
-      fontWeight: 800
+      fontWeight: 800,
+      marginBottom: 16
     }
-  }, "Configuración")), msg && React.createElement("div", {
+  }, "Configuración"), msg && React.createElement("div", {
     style: {
       background: 'var(--ok-bg)',
       borderRadius: 8,
@@ -216,6 +203,7 @@ function Configuracion({
       marginBottom: 12
     }
   }, err), React.createElement(Row, {
+    className: 'fx-config-tabs',
     style: {
       gap: 6,
       marginBottom: 16,
@@ -246,11 +234,6 @@ function Configuracion({
     }
   }, React.createElement("div", {
     style: {
-      fontSize: 52,
-      marginBottom: 8
-    }
-  }, "👤"), React.createElement("div", {
-    style: {
       fontSize: 18,
       fontWeight: 700
     }
@@ -260,7 +243,7 @@ function Configuracion({
       color: 'var(--ink-soft)',
       marginTop: 2
     }
-  }, "✉️ ", currentUser.email), React.createElement(Tag, {
+  }, currentUser.email), React.createElement(Tag, {
     color: roleColor(currentUser.role),
     style: {
       marginTop: 8,
@@ -273,7 +256,7 @@ function Configuracion({
       width: '100%',
       marginTop: 8
     }
-  }, "🚪 Cerrar sesión")), sub === 'password' && React.createElement(Card, null, React.createElement(Lbl, null, "Contraseña actual"), React.createElement(PwInp, {
+  }, "Cerrar sesión")), sub === 'password' && React.createElement(Card, null, React.createElement(Lbl, null, "Contraseña actual"), React.createElement(PwInp, {
     value: pw.old,
     onChange: e => setPw(f => ({
       ...f,
@@ -297,7 +280,7 @@ function Configuracion({
       width: '100%',
       marginTop: 6
     }
-  }, "🔑 Actualizar contraseña")), sub === 'pin' && React.createElement(Card, null, React.createElement("div", {
+  }, "Actualizar contraseña")), sub === 'pin' && React.createElement(Card, null, React.createElement("div", {
     style: {
       fontSize: 13,
       color: 'var(--ink-soft)',
@@ -310,7 +293,7 @@ function Configuracion({
       fontWeight: 700,
       marginBottom: 12
     }
-  }, hasPin ? '🔒 PIN activado en este dispositivo' : 'Sin PIN configurado en este dispositivo'), React.createElement(BFill, {
+  }, hasPin ? 'PIN activado en este dispositivo' : 'Sin PIN configurado en este dispositivo'), React.createElement(BFill, {
     onClick: startPin,
     style: {
       width: '100%'
@@ -461,7 +444,7 @@ function Configuracion({
         color: 'var(--ink-soft)',
         marginTop: 2
       }
-    }, "✉️ ", u.email)))), React.createElement("div", {
+    }, u.email)))), React.createElement("div", {
       style: {
         maxHeight: expanded ? 80 : 0,
         overflow: 'hidden',
@@ -485,7 +468,7 @@ function Configuracion({
       style: {
         flex: 1
       }
-    }, "✏️ Editar"), u.id !== currentUser.uid && React.createElement(BOut, {
+    }, "Editar"), u.id !== currentUser.uid && React.createElement(BOut, {
       onClick: () => {
         if (window.confirm(`¿Eliminar el perfil de "${u.nombre}"? Esta acción no se puede deshacer.`)) {
           delUser(u);
@@ -496,7 +479,7 @@ function Configuracion({
       style: {
         flex: 1
       }
-    }, "🗑 Eliminar"))));
+    }, "Eliminar"))));
   })), sub === 'medicion' && isAdmin && React.createElement(ConfiguracionMedicion, { currentUser, medicion, tarifas }), sub === 'flota' && isAdmin && React.createElement(GestionFlota, { currentUser, medicion, vehiculos, medidores }), sub === 'permisos' && isAdmin && React.createElement(Permisos, {
     currentUser: currentUser
   }), form && React.createElement(Modal, {
@@ -564,5 +547,5 @@ function Configuracion({
     style: {
       width: '100%'
     }
-  }, "💾 Guardar")));
+  }, "Guardar")));
 }

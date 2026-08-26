@@ -2596,3 +2596,229 @@ body::before { display: none !important; }
   padding: 2px 5px !important;
   font-size: 9px !important;
 }
+
+
+/* Iteración 32 — Auditoría transversal: módulos no normalizados. */
+.fx-page-credits,
+.fx-page-inventory {
+  width: 100% !important;
+  max-width: 980px !important;
+  margin: 0 auto !important;
+  padding: 10px 0 24px !important;
+}
+
+.fx-credits-heading,
+.fx-inventory-heading,
+.fx-config-heading {
+  color: var(--fx-navy) !important;
+  font-size: 22px !important;
+  font-weight: 800 !important;
+  letter-spacing: -.02em !important;
+}
+
+.fx-page-credits .fx-credit-summary {
+  background: transparent !important;
+  border: 0 !important;
+  border-top: 2px solid var(--fx-amber) !important;
+  border-bottom: 1px solid var(--fx-line) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 11px 0 !important;
+  margin-bottom: 0 !important;
+}
+.fx-page-credits .fx-credit-summary > div:nth-child(2) {
+  color: var(--fx-navy) !important;
+  font-size: 23px !important;
+}
+.fx-page-credits .fx-credit-record {
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--fx-line) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 12px 0 !important;
+  margin-bottom: 0 !important;
+}
+.fx-page-credits .fx-credit-record > div:nth-child(3) {
+  background: #EEF2F4 !important;
+  border-radius: 2px !important;
+}
+.fx-page-credits .fx-credit-record .fx-tag {
+  border-radius: 3px !important;
+  padding: 2px 5px !important;
+  font-size: 9px !important;
+}
+.fx-page-credits button {
+  min-height: 34px !important;
+  border-radius: 4px !important;
+  box-shadow: none !important;
+}
+.fx-page-credits .fx-credit-record button {
+  font-size: 10px !important;
+}
+
+.fx-inventory-tabs {
+  display: flex !important;
+  gap: 0 !important;
+  border-top: 1px solid var(--fx-line) !important;
+  border-bottom: 1px solid var(--fx-line) !important;
+  margin-bottom: 12px !important;
+}
+.fx-page-inventory input,
+.fx-page-inventory select {
+  min-height: 38px !important;
+  border: 1px solid var(--fx-line-strong) !important;
+  border-radius: 4px !important;
+  background: var(--fx-surface) !important;
+  color: var(--fx-ink) !important;
+  font-size: 11px !important;
+}
+.fx-page-inventory button {
+  min-height: 34px !important;
+  border-radius: 4px !important;
+  box-shadow: none !important;
+  font-size: 10px !important;
+}
+.fx-page-inventory .fx-inventory-tabs button {
+  flex: 1 !important;
+  border: 0 !important;
+  border-right: 1px solid var(--fx-line) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--fx-ink-soft) !important;
+  padding: 8px 6px !important;
+}
+.fx-page-inventory .fx-inventory-tabs button:last-child { border-right: 0 !important; }
+.fx-page-inventory .fx-inventory-tabs button[style*="var(--accent)"] {
+  background: var(--fx-amber) !important;
+  color: var(--fx-ink) !important;
+}
+.fx-page-inventory [style*="background: var(--surface-2)"] {
+  background: #F6F8F9 !important;
+  border-color: var(--fx-line) !important;
+  border-radius: 4px !important;
+}
+.fx-page-inventory [style*="borderBottom: '1px solid var(--line)'"] {
+  border-bottom-color: var(--fx-line) !important;
+}
+
+.fx-page-config .fx-config-heading {
+  margin-bottom: 12px !important;
+}
+.fx-page-config .fx-permissions {
+  width: 100% !important;
+}
+.fx-page-config .fx-permissions > .fx-card {
+  border-radius: 5px !important;
+  box-shadow: none !important;
+}
+.fx-page-config .fx-permissions > .fx-card > button {
+  min-height: 48px !important;
+  border-bottom: 1px solid var(--fx-line) !important;
+}
+.fx-page-config .fx-permissions span:empty {
+  display: none !important;
+}
+.fx-page-config .fx-permissions .fx-tag {
+  border-radius: 3px !important;
+  padding: 2px 6px !important;
+  font-size: 9px !important;
+}
+.fx-page-config .fx-permissions button {
+  box-shadow: none !important;
+}
+.fx-page-config .fx-permissions > div:last-child {
+  color: var(--fx-ink-soft) !important;
+  font-size: 10px !important;
+}
+.fx-pin-lock {
+  color: var(--fx-ink) !important;
+}
+.fx-pin-lock > button {
+  color: var(--fx-petroleum) !important;
+  border-radius: 4px !important;
+}
+
+@media (max-width: 767px) {
+  .fx-page-credits,
+  .fx-page-inventory { padding: 8px 0 20px !important; }
+  .fx-credits-heading,
+  .fx-inventory-heading,
+  .fx-config-heading { font-size: 21px !important; }
+  .fx-page-credits .fx-credit-record { padding: 11px 0 !important; }
+  .fx-page-inventory .fx-inventory-tabs button { font-size: 10px !important; }
+}
+
+
+/* Ajuste de continuidad del shell: ningún elemento fijo queda limitado al ancho móvil en escritorio. */
+.app-accent-bar,
+.app-offline-banner,
+.app-nav-shell {
+  left: 0 !important;
+  right: 0 !important;
+  max-width: none !important;
+  transform: none !important;
+}
+.app-nav-shell nav {
+  left: 0 !important;
+}
+.fx-config-tabs {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 4px !important;
+  margin-bottom: 14px !important;
+}
+.fx-config-tabs button {
+  min-height: 38px !important;
+  padding: 8px 6px !important;
+  border: 1px solid var(--fx-line) !important;
+  border-radius: 4px !important;
+  background: #FFFFFF !important;
+  color: var(--fx-ink-soft) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+}
+.fx-config-tabs button[style*="var(--accent)"] {
+  background: var(--fx-amber) !important;
+  color: var(--fx-ink) !important;
+  border-color: var(--fx-amber) !important;
+}
+@media (max-width: 767px) {
+  .fx-config-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+}
+
+
+/* Continuidad de los flujos operativos internos. */
+.fx-page-route button,
+.fx-page-jornada button,
+.fx-page-jornada-admin button,
+.fx-page-relleno button {
+  border-radius: 4px !important;
+  box-shadow: none !important;
+}
+.fx-page-route input,
+.fx-page-route select,
+.fx-page-jornada input,
+.fx-page-jornada select,
+.fx-page-relleno input,
+.fx-page-relleno select {
+  border-radius: 4px !important;
+  border-color: var(--fx-line-strong) !important;
+}
+.fx-page-jornada [style*="background: var(--surface-2)"],
+.fx-page-relleno [style*="background: var(--surface-2)"] {
+  border-radius: 4px !important;
+}
+.fx-page-relleno {
+  border-color: var(--fx-line) !important;
+  border-radius: 6px !important;
+}
+.fx-relleno-drafts {
+  border-color: var(--fx-line) !important;
+  border-radius: 6px !important;
+  box-shadow: none !important;
+}
+.fx-page-relleno > div:first-child button {
+  color: var(--fx-navy) !important;
+  font-size: 12px !important;
+}

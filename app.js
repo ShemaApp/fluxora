@@ -19,7 +19,7 @@ function App() {
   }, []);
   const esAdmin = currentUser?.role === 'admin';
   const esRepartidor = currentUser?.role === 'repartidor';
-  const ALL_TABS = [['home', '🏠', 'Inicio'], ['clientes', '👥', 'Clientes'], ['creditos', '💳', 'Créditos'], ['ruta', '🚚', esRepartidor ? 'Operación' : 'Jornadas'], ['jornada', '⏱', esRepartidor ? 'Jornadas' : 'Control'], ['repartidores', '🧭', 'Operación'], ['productos', '📦', 'Catálogo'], ['inventario', '📋', 'Inventario'], ['reportes', '📈', 'Reportes'], ['gerencia', '💰', 'Caja'], ['jerarquia', '🏢', 'Cobertura'], ['privacidad', '🛡️', 'Privacidad']];
+  const ALL_TABS = [['home', '', 'Inicio'], ['clientes', '', 'Clientes'], ['creditos', '', 'Créditos'], ['ruta', '', esRepartidor ? 'Operación' : 'Jornadas'], ['jornada', '', esRepartidor ? 'Jornadas' : 'Control'], ['repartidores', '', 'Operación'], ['productos', '', 'Catálogo'], ['inventario', '', 'Inventario'], ['reportes', '', 'Reportes'], ['gerencia', '', 'Caja'], ['jerarquia', '', 'Cobertura'], ['privacidad', '', 'Privacidad']];
   const permTabs = permisoTabs(currentUser);
   const tabsPermitidos = esRepartidor ? ['home', 'ruta', 'jornada'] : ['home', 'privacidad', ...ALL_TABS.filter(([id]) => id !== 'home' && id !== 'privacidad' && permTabs[id]).map(([id]) => id)];
   const TABS = ALL_TABS.filter(([id]) => tabsPermitidos.includes(id));
@@ -231,7 +231,7 @@ function App() {
       padding: '6px 12px',
       boxSizing: 'border-box'
     }
-  }, isOnline ? `⏳ Sincronizando ${pendientesTotales} cambio${pendientesTotales === 1 ? '' : 's'}…` : `📡 Sin conexión — puedes seguir trabajando, se sincroniza solo${pendientesTotales > 0 ? ` (${pendientesTotales} en cola)` : ''}`), React.createElement("main", {
+  }, isOnline ? `Sincronizando ${pendientesTotales} cambio${pendientesTotales === 1 ? '' : 's'}…` : `Sin conexión — puedes seguir trabajando, se sincroniza solo${pendientesTotales > 0 ? ` (${pendientesTotales} en cola)` : ''}`), React.createElement("main", {
     className: 'app-main-content'
   }, firestoreError && React.createElement("div", {
     style: {

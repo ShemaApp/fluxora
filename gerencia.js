@@ -70,7 +70,7 @@ function Gerencia({ currentUser, notas, creditos }) {
                 capturadoPorNombre: currentUser.nombre,
             });
             setForm({ pagadoA: '', monto: '', motivo: '', formaPago: 'efectivo' });
-            flash('✅ Gasto registrado');
+            flash('Gasto registrado');
         }
         catch (e) {
             alert('Error al guardar el gasto: ' + e.message);
@@ -169,7 +169,7 @@ function Gerencia({ currentUser, notas, creditos }) {
             };
             await db.collection('cierres_caja').doc(idCierreCaja).set(datosCierre);
             if (typeof appClearDraft === 'function') appClearDraft('cierre_caja', currentUser.uid);
-            flash(`✅ Cierre ${datosCierre.turnoNumero} guardado en el historial`);
+            flash(`Cierre ${datosCierre.turnoNumero} guardado en el historial`);
             setCierreOpen(false);
         }
         catch (e) {

@@ -117,7 +117,7 @@ function useSesion() {
 
     const errorHandler = err => {
       console.error('Firestore error:', err);
-      setFirestoreError('⚠️ Error de conexión con la base de datos. Revisa tus permisos.');
+      setFirestoreError('Error de conexión con la base de datos. Revisa tus permisos.');
     };
     const referenciaErrorHandler = err => {
       console.warn('Referencias de vehículo/medidor no disponibles todavía:', err);
@@ -250,7 +250,7 @@ function useSesion() {
         setPendCounts(p => ({ ...p, clientes: pendientesClientes }));
       }, err => {
         console.error('Firestore error clientes:', err);
-        setFirestoreError('⚠️ Error de conexión con clientes. Revisa tus permisos.');
+        setFirestoreError('Error de conexión con clientes. Revisa tus permisos.');
       });
     }
 
@@ -276,7 +276,7 @@ function useSesion() {
       actualizarClientes();
     }, err => {
       console.error('Firestore error clientes por localidad:', err);
-      setFirestoreError('⚠️ No se pudieron cargar los clientes de tus localidades. Revisa tus permisos.');
+      setFirestoreError('No se pudieron cargar los clientes de tus localidades. Revisa tus permisos.');
     }));
     return () => unsubs.forEach(unsub => unsub());
   }, [currentUser?.uid, currentUser?.role, localidades.map(localidad => `${localidad.id}:${localidad.repartidorId || ''}:${Array.isArray(localidad.repartidorIds) ? localidad.repartidorIds.join(',') : ''}:${localidad.activo === false ? '0' : '1'}`).join('|')]);

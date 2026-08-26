@@ -54,14 +54,14 @@ function Dashboard({ notas = [], productos = [], creditos = [], clientes = [], j
   }
 
   const acciones = [
-    ['🏢', 'Cobertura', 'Relacionar localidad, repartidor, vehículo y medidor', 'jerarquia'],
-    ['🚚', 'Operación', 'Consultar cargas y jornadas por localidad', 'repartidores'],
-    ['👥', 'Clientes', 'Consultar clientes y su localidad asignada', 'clientes'],
-    ['📏', 'Medición', 'Configurar litros, contador físico y precio', 'config'],
-    ['📦', 'Inventario', 'Consultar existencias y movimientos reales', 'inventario'],
-    ['💳', 'Créditos', 'Consultar saldos y pagos registrados', 'creditos'],
-    ['💰', 'Caja', 'Revisar efectivo esperado y cierres', 'gerencia'],
-    ['📈', 'Reportes', 'Exportar ventas, litros y diferencias', 'reportes']
+    ['', 'Cobertura', 'Relacionar localidad, repartidor, vehículo y medidor', 'jerarquia'],
+    ['', 'Operación', 'Consultar cargas y jornadas por localidad', 'repartidores'],
+    ['', 'Clientes', 'Consultar clientes y su localidad asignada', 'clientes'],
+    ['', 'Medición', 'Configurar litros, contador físico y precio', 'config'],
+    ['', 'Inventario', 'Consultar existencias y movimientos reales', 'inventario'],
+    ['', 'Créditos', 'Consultar saldos y pagos registrados', 'creditos'],
+    ['', 'Caja', 'Revisar efectivo esperado y cierres', 'gerencia'],
+    ['', 'Reportes', 'Exportar ventas, litros y diferencias', 'reportes']
   ];
   return React.createElement('div', { className: 'fx-page-home', style: { padding: '16px 12px' } },
     React.createElement('div', { style: { fontSize: 20, fontWeight: 800, marginBottom: 4 } }, 'Inicio'),

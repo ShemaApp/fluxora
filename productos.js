@@ -358,7 +358,7 @@ function Productos({
         color: 'var(--ink-faint)',
         marginTop: 3
       }
-    }, "🏷️ ", p.codigoBarras))), React.createElement("div", {
+    }, p.codigoBarras))), React.createElement("div", {
       className: 'fx-catalog-item-actions',
       style: {
         maxHeight: expanded ? 120 : 0,
