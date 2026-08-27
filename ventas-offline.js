@@ -1,7 +1,7 @@
 /*
- * Cola offline de ventas de agua medida.
+ * Cola offline única de operaciones de agua medida.
  *
- * La venta se captura con cantidad comercial y snapshots de tarifa, pero la
+ * Incluye inicio de jornada, carga y recarga, ventas y cierre. La venta se captura con cantidad comercial y snapshots de tarifa, pero la
  * jornada conserva la lectura lógica y el saldo de agua. La lectura física
  * solamente se captura al abrir y cerrar la jornada.
  */
@@ -240,6 +240,13 @@
       litrosVendidos: payload.litrosVendidos == null ? null : Number(payload.litrosVendidos),
       aguaDisponibleAntesLitros: payload.aguaDisponibleAntesLitros == null ? null : Number(payload.aguaDisponibleAntesLitros),
       aguaDisponibleDespuesLitros: payload.aguaDisponibleDespuesLitros == null ? null : Number(payload.aguaDisponibleDespuesLitros),
+      jornadaPatch: payload.jornadaPatch ? clone(payload.jornadaPatch) : {
+        lecturaActual: payload.lecturaCalculadaDespues == null ? null : Number(payload.lecturaCalculadaDespues),
+        lecturaCalculadaActual: payload.lecturaCalculadaDespues == null ? null : Number(payload.lecturaCalculadaDespues),
+        aguaDisponibleLitros: payload.aguaDisponibleDespuesLitros == null ? null : Number(payload.aguaDisponibleDespuesLitros),
+        ultimaVentaId: ventaId,
+        actualizadoEn: fecha
+      },
       garrafones: payload.garrafones == null ? null : Number(payload.garrafones),
       unidadComercial: payload.unidadComercial || null,
       incrementoContador: payload.incrementoContador == null ? null : Number(payload.incrementoContador),
@@ -257,6 +264,43 @@
       tipoVenta: 'venta_agua_medidor',
       notaId: payload.notaId || ventaId,
       creditoId: payload.formaPago === 'credito' ? (payload.creditoId || uid()) : null,
+      ultimoError: '',
+      errorHistorial: [],
+      intentos: 0
+    };
+  };
+
+  const TIPOS_OPERACION_OPERATIVA = ['inicio_jornada', 'recarga_agua', 'cierre_jornada'];
+  const normalizeOperationalPayload = payload => {
+    const tipoOperacion = String(payload.tipoOperacion || '');
+    if (!TIPOS_OPERACION_OPERATIVA.includes(tipoOperacion)) throw new Error('Tipo de operación local no admitido');
+    if (!payload.repartidorUid) throw new Error('La operación necesita un repartidor autenticado');
+    if (!payload.jornadaId || !payload.vehiculoId || !payload.medidorId || !payload.localidadId) throw new Error('La operación necesita jornada, localidad, vehículo y medidor');
+    const fecha = payload.fecha || new Date().toISOString();
+    const idLocal = String(payload.idLocal || payload.operacionIdempotente || `${tipoOperacion}:${payload.jornadaId}:${uid()}`);
+    return {
+      id: idLocal,
+      idLocal,
+      operacionIdempotente: String(payload.operacionIdempotente || idLocal),
+      modoOperacion: 'jornada_operativa',
+      tipoOperacion,
+      estado: 'pendiente',
+      syncStatus: 'pending',
+      version: 2,
+      creadoEn: fecha,
+      actualizadoEn: fecha,
+      createdOfflineAt: payload.createdOfflineAt || fecha,
+      updatedOfflineAt: payload.updatedOfflineAt || fecha,
+      jornadaId: String(payload.jornadaId),
+      vehiculoId: String(payload.vehiculoId),
+      vehiculoNombre: String(payload.vehiculoNombre || payload.vehiculo || ''),
+      medidorId: String(payload.medidorId),
+      medidorNombre: String(payload.medidorNombre || ''),
+      localidadId: String(payload.localidadId),
+      localidadNombre: String(payload.localidadNombre || payload.localidad || ''),
+      repartidorUid: String(payload.repartidorUid),
+      repartidorNombre: String(payload.repartidorNombre || ''),
+      payload: clone(payload.payload || {}),
       ultimoError: '',
       errorHistorial: [],
       intentos: 0
@@ -490,6 +534,83 @@
     }
   };
 
+  const aplicarOperacionRemota = async operacion => {
+    const firestore = obtenerDb();
+    if (!firestore || !global.firebase?.firestore) throw new Error('Firestore aún no está inicializado');
+    const payload = operacion.payload || {};
+    const jornadaRef = firestore.collection('jornadas').doc(operacion.jornadaId);
+    const cargas = firestore.collection('cargas_agua');
+    const lecturas = firestore.collection('lecturas_medidor');
+    const cargaRef = payload.cargaId ? cargas.doc(payload.cargaId) : null;
+    const lecturaRef = payload.lecturaId ? lecturas.doc(payload.lecturaId) : null;
+    return firestore.runTransaction(async tx => {
+      const jornadaSnap = await tx.get(jornadaRef);
+      if (operacion.tipoOperacion === 'inicio_jornada') {
+        if (jornadaSnap.exists) return { estado: 'confirmada', tipoOperacion: operacion.tipoOperacion, idLocal: operacion.idLocal, yaExistia: true, jornadaId: operacion.jornadaId };
+        tx.set(jornadaRef, payload.jornadaData);
+        if (cargaRef && payload.cargaData) tx.set(cargaRef, payload.cargaData);
+        if (lecturaRef && payload.lecturaData) tx.set(lecturaRef, payload.lecturaData);
+        return { estado: 'confirmada', tipoOperacion: operacion.tipoOperacion, idLocal: operacion.idLocal, jornadaId: operacion.jornadaId };
+      }
+      if (!jornadaSnap.exists) throw errorBloqueo('La jornada de la operación ya no existe', { tipo: 'jornada_no_encontrada' });
+      const jornada = jornadaSnap.data();
+      if (String(jornada.repartidorId || '') !== String(operacion.repartidorUid) || String(jornada.localidadId || '') !== String(operacion.localidadId) || String(jornada.vehiculoId || '') !== String(operacion.vehiculoId) || String(jornada.medidorId || '') !== String(operacion.medidorId)) throw errorBloqueo('La jornada, localidad, vehículo o medidor no corresponde a la operación local', { tipo: 'referencias_no_continuas' });
+      if (operacion.tipoOperacion === 'recarga_agua') {
+        if (jornada.estado !== 'abierta') throw errorBloqueo('La jornada ya está cerrada', { tipo: 'jornada_cerrada' });
+        if (cargaRef) {
+          const cargaSnap = await tx.get(cargaRef);
+          if (cargaSnap.exists) return { estado: 'confirmada', tipoOperacion: operacion.tipoOperacion, idLocal: operacion.idLocal, yaExistia: true, cargaId: cargaRef.id };
+        }
+        const antes = Number(payload.aguaDisponibleAntesLitros);
+        const actual = Number(jornada.aguaDisponibleLitros || 0);
+        if (!Number.isFinite(antes) || Math.abs(actual - antes) > 1e-9) throw errorBloqueo('El saldo de agua cambió; la recarga local ya no continúa la jornada', { tipo: 'saldo_no_continuo', disponibleJornada: actual, disponibleOperacion: antes });
+        if (cargaRef && payload.cargaData) tx.set(cargaRef, payload.cargaData);
+        tx.update(jornadaRef, payload.jornadaPatch || {});
+        return { estado: 'confirmada', tipoOperacion: operacion.tipoOperacion, idLocal: operacion.idLocal, cargaId: cargaRef?.id || null };
+      }
+      if (operacion.tipoOperacion === 'cierre_jornada') {
+        if (jornada.estado === 'cerrada') return { estado: 'confirmada', tipoOperacion: operacion.tipoOperacion, idLocal: operacion.idLocal, yaExistia: true, jornadaId: operacion.jornadaId };
+        if (jornada.estado !== 'abierta') throw errorBloqueo('La jornada no está disponible para cierre', { tipo: 'jornada_no_abierta' });
+        tx.update(jornadaRef, payload.jornadaPatch || {});
+        if (lecturaRef && payload.lecturaData) tx.set(lecturaRef, payload.lecturaData);
+        return { estado: 'confirmada', tipoOperacion: operacion.tipoOperacion, idLocal: operacion.idLocal, jornadaId: operacion.jornadaId };
+      }
+      throw errorBloqueo('Tipo de operación no admitido', { tipo: 'tipo_operacion_no_admitido' });
+    });
+  };
+
+  const sincronizarRegistro = operacion => operacion.tipoOperacion === 'venta_agua_medidor' ? conciliar(operacion) : aplicarOperacionRemota(operacion);
+
+  const guardarOperacionLocal = async payload => {
+    const operacion = normalizeOperationalPayload(payload);
+    await putRecord(operacion);
+    await notify();
+    if (!global.navigator?.onLine) return { estado: 'pendiente_local', syncStatus: 'pending', idLocal: operacion.idLocal, tipoOperacion: operacion.tipoOperacion, jornadaId: operacion.jornadaId };
+    let estadoNotificado = false;
+    try {
+      const resultado = await processOne(operacion);
+      const fechaSync = new Date().toISOString();
+      const erroresResultado = resultado.estado === 'bloqueada'
+        ? [{ idLocal: operacion.idLocal, tipoOperacion: operacion.tipoOperacion, syncStatus: 'blocked', mensaje: resultado.error || 'La operación fue bloqueada durante la sincronización', fecha: fechaSync, jornadaId: operacion.jornadaId }]
+        : [];
+      syncStatus = { ...syncStatus, ultimaSincronizacion: fechaSync, ultimaResultado: { total: 1, sincronizadas: resultado.estado === 'confirmada' ? 1 : 0, incidencias: 0, pendientes: 0, errores: erroresResultado, origen: 'operacion_online' } };
+      await notify(erroresResultado);
+      estadoNotificado = true;
+      if (resultado.estado === 'bloqueada') throw errorBloqueo(resultado.error || 'La operación fue bloqueada durante la sincronización', { tipo: 'operacion_bloqueada', idLocal: operacion.idLocal });
+      return { ...resultado, idLocal: operacion.idLocal, tipoOperacion: operacion.tipoOperacion, syncStatus: resultado.syncStatus || 'synced' };
+    } catch (error) {
+      if (error.__appBloqueo === true) {
+        if (!estadoNotificado) await notify([{ idLocal: operacion.idLocal, tipoOperacion: operacion.tipoOperacion, syncStatus: 'blocked', mensaje: error.message, fecha: new Date().toISOString(), jornadaId: operacion.jornadaId }]);
+        throw error;
+      }
+      if (isRetryableError(error)) {
+        await notify([{ idLocal: operacion.idLocal, tipoOperacion: operacion.tipoOperacion, syncStatus: 'error', mensaje: error.message, fecha: new Date().toISOString(), jornadaId: operacion.jornadaId }]);
+        return { estado: 'pendiente_local', syncStatus: 'pending', idLocal: operacion.idLocal, tipoOperacion: operacion.tipoOperacion, jornadaId: operacion.jornadaId };
+      }
+      throw error;
+    }
+  };
+
   const processOne = async venta => {
     const actual = await getRecord(venta.id);
     if (!actual || !RETRY_STATES.includes(actual.estado)) return { estado: actual?.estado || 'omitida' };
@@ -497,7 +618,7 @@
     const reintentando = { ...actual, estado: 'reintentando', syncStatus: 'syncing', intentos: Number(actual.intentos || 0) + 1, actualizadoEn, updatedOfflineAt: actualizadoEn };
     await putRecord(reintentando);
     try {
-      const resultado = await conciliar(reintentando);
+      const resultado = await sincronizarRegistro(reintentando);
       await deleteRecord(reintentando.id);
       return { ...resultado, idLocal: reintentando.idLocal || reintentando.id, syncStatus: 'synced' };
     } catch (error) {
@@ -548,7 +669,7 @@
 
   const pendientesJornada = async jornadaId => {
     const records = (await allRecords()).filter(record => record.jornadaId === jornadaId && RETRY_STATES.includes(record.estado));
-    return { total: records.length, ventas: records };
+    return { total: records.length, ventas: records.filter(record => record.tipoOperacion === 'venta_agua_medidor'), operaciones: records };
   };
   const resumen = async () => {
     const records = await allRecords();
@@ -556,7 +677,9 @@
       total: records.length,
       pendientes: records.filter(record => RETRY_STATES.includes(record.estado)).length,
       incidencias: records.filter(record => record.estado === 'requiere_revision').length,
-      registros: records
+      registros: records,
+      ventas: records.filter(record => record.tipoOperacion === 'venta_agua_medidor'),
+      operaciones: records
     };
   };
   const subscribe = callback => {
@@ -573,6 +696,7 @@
   };
 
   global.appGuardarVentaAgua = guardar;
+  global.appGuardarOperacionLocal = guardarOperacionLocal;
   global.appEncolarVentaAgua = enqueue;
   global.appSincronizarVentasOffline = sincronizar;
   global.appVentasPendientesJornada = pendientesJornada;

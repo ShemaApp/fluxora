@@ -2,9 +2,39 @@
    La localidad es la unidad operativa; vehículo y medidor llegan como
    referencias separadas desde su asignación administrativa. */
 const CAPACIDAD_TANQUE_LITROS = 5000;
-function JornadaMedidor({ localidades = [], jornadas = [], notas = [], clientes = [], cargasAgua = [], servicios = [], medicion = null, vehiculos = [], medidores = [], currentUser = {}, onIrA }) {
+function JornadaMedidor({ localidades = [], jornadas = [], notas = [], clientes = [], cargasAgua = [], servicios = [], medicion = null, vehiculos = [], medidores = [], currentUser = {}, onIrA, offlineVentaResumen = {} }) {
   const localidadesDisponibles = obtenerLocalidadesAsignadas({ localidades, currentUser, localidadIds: currentUser.localidadIds });
-  const jornadaAbierta = (jornadas || []).find(j => j.estado === 'abierta' && (currentUser.role === 'admin' || j.repartidorId === currentUser.uid));
+  const operacionesLocales = (offlineVentaResumen?.operaciones || offlineVentaResumen?.registros || [])
+    .filter(operacion => operacion.repartidorUid === currentUser.uid && (['pending', 'syncing'].includes(operacion.syncStatus) || ['pendiente', 'reintentando'].includes(operacion.estado)))
+    .sort((a, b) => new Date(a.creadoEn || a.createdOfflineAt || 0) - new Date(b.creadoEn || b.createdOfflineAt || 0));
+  const jornadasOperativas = (() => {
+    const mapa = new Map((jornadas || []).map(jornada => [jornada.id, { ...jornada }]));
+    operacionesLocales.forEach(operacion => {
+      const payload = operacion.payload || {};
+      const actual = mapa.get(operacion.jornadaId) || {
+        id: operacion.jornadaId,
+        repartidorId: operacion.repartidorUid,
+        repartidorNombre: operacion.repartidorNombre || '',
+        localidadId: operacion.localidadId,
+        localidadNombre: operacion.localidadNombre || '',
+        vehiculoId: operacion.vehiculoId,
+        vehiculoNombre: operacion.vehiculoNombre || '',
+        medidorId: operacion.medidorId,
+        medidorNombre: operacion.medidorNombre || '',
+        estado: 'abierta'
+      };
+      const jornadaData = operacion.tipoOperacion === 'inicio_jornada' ? payload.jornadaData || {} : {};
+      const patch = payload.jornadaPatch || (operacion.tipoOperacion === 'venta_agua_medidor' ? operacion.jornadaPatch : {}) || {};
+      mapa.set(operacion.jornadaId, { ...actual, ...jornadaData, ...patch, id: operacion.jornadaId, __localPendiente: true });
+    });
+    return Array.from(mapa.values());
+  })();
+  const cargasOperativas = [...(cargasAgua || [])];
+  operacionesLocales.filter(operacion => operacion.tipoOperacion === 'recarga_agua').forEach(operacion => {
+    const carga = operacion.payload?.cargaData;
+    if (carga && !cargasOperativas.some(item => item.id === carga.id || item.idLocal === operacion.idLocal)) cargasOperativas.push({ id: operacion.payload.cargaId || operacion.idLocal, ...carga, __localPendiente: true });
+  });
+  const jornadaAbierta = jornadasOperativas.find(j => j.estado === 'abierta' && (currentUser.role === 'admin' || j.repartidorId === currentUser.uid));
   const [form, setForm] = useState(() => {
     const borrador = typeof appReadDraft === 'function' ? appReadDraft('jornada', currentUser?.uid) : null;
     return borrador?.form || { localidadId: '', localidadNombre: '', vehiculoId: '', vehiculo: '', vehiculoNombre: '', medidorId: '', medidorNombre: '', lecturaInicial: '', aguaCargadaLitros: '' };
@@ -28,8 +58,8 @@ function JornadaMedidor({ localidades = [], jornadas = [], notas = [], clientes 
     if (mismaLocalidad) return true;
     return !!form.localidadNombre && String(j.localidadNombre || j.localidad || '') === String(form.localidadNombre);
   };
-  const jornadaLocalidadAbierta = (jornadas || []).find(j => j.estado === 'abierta' && referenciasCoinciden(j));
-  const jornadasInstrumento = (jornadas || []).filter(j => j.estado === 'cerrada' && referenciasCoinciden(j)).sort((a, b) => new Date(b.fechaCierre || 0) - new Date(a.fechaCierre || 0));
+  const jornadaLocalidadAbierta = jornadasOperativas.find(j => j.estado === 'abierta' && referenciasCoinciden(j));
+  const jornadasInstrumento = jornadasOperativas.filter(j => j.estado === 'cerrada' && referenciasCoinciden(j)).sort((a, b) => new Date(b.fechaCierre || 0) - new Date(a.fechaCierre || 0));
   const jornadaAnterior = jornadasInstrumento[0];
   const lecturaLocalidadCompatible = !localidadActual?.medidorId || !medidorActual.id || String(localidadActual.medidorId) === String(medidorActual.id);
   const lecturaAnterior = jornadaAnterior?.lecturaFinal ?? (lecturaLocalidadCompatible ? localidadActual?.lecturaActual : null) ?? null;
@@ -44,7 +74,7 @@ function JornadaMedidor({ localidades = [], jornadas = [], notas = [], clientes 
     return (localidadId && String(c.localidadId || '') === String(localidadId)) || (!c.localidadId && localidadNombre && String(c.localidadNombre || c.localidad || c.domicilio || '').trim().toLowerCase() === String(localidadNombre).trim().toLowerCase());
   });
   const clientesAtendidos = new Set((notas || []).filter(n => jornadaAbierta && n.capturadoPorUid === jornadaAbierta.repartidorId && new Date(n.fecha || 0).getTime() >= new Date(jornadaAbierta.fechaInicio || 0).getTime()).map(n => n.clienteId).concat((servicios || []).filter(servicio => jornadaAbierta && servicio.jornadaId === jornadaAbierta.id && servicio.estado === 'completado').map(servicio => servicio.clienteId)));
-  const cargasJornada = (cargasAgua || []).filter(carga => jornadaAbierta && carga.jornadaId === jornadaAbierta.id);
+  const cargasJornada = cargasOperativas.filter(carga => jornadaAbierta && carga.jornadaId === jornadaAbierta.id);
   const litrosRecargadosJornada = cargasJornada.filter(carga => carga.tipo === 'recarga').reduce((total, carga) => total + Number(carga.litros || 0), 0);
   const capacidadTanqueLitros = Number(jornadaAbierta?.capacidadTanqueLitros || CAPACIDAD_TANQUE_LITROS);
   const aguaDisponibleJornada = Math.max(0, Number(jornadaAbierta?.aguaDisponibleLitros || 0));
@@ -109,37 +139,43 @@ function JornadaMedidor({ localidades = [], jornadas = [], notas = [], clientes 
     if (aguaCargadaLitros > CAPACIDAD_TANQUE_LITROS) return flash(`La carga inicial no puede superar la capacidad del tanque de ${CAPACIDAD_TANQUE_LITROS.toLocaleString('es-MX')} L`);
     if (lecturaAnterior !== null && inicio < Number(lecturaAnterior)) return flash('La lectura inicial no puede ser menor que la última lectura registrada');
     try {
-      const jornadaRef = db.collection('jornadas').doc();
+      const crearIdLocal = prefijo => `${prefijo}-${typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)}`;
+      const jornadaId = crearIdLocal('jornada');
+      const cargaId = `${jornadaId}-inicial`;
+      const lecturaId = `${jornadaId}-inicial`;
       const fechaInicio = new Date().toISOString();
-      const lecturaInicialRef = db.collection('lecturas_medidor').doc(`${jornadaRef.id}-inicial`);
-      const cargaInicialRef = db.collection(COLECCIONES.CARGAS_AGUA).doc(`${jornadaRef.id}-inicial`);
-      const escribirInicio = tx => {
-        tx.set(jornadaRef, {
-          estado: 'abierta', repartidorId: currentUser.uid, repartidorNombre: currentUser.nombre || '',
-          localidadId: localidad.id, localidadNombre: localidad.nombre || '', localidad: localidad.nombre || '', vehiculo: vehiculo.nombre, vehiculoId: vehiculo.id, vehiculoNombre: vehiculo.nombre, medidorId: medidor.id, medidorNombre: medidor.nombre,
-          lecturaAnterior: lecturaAnterior === null ? null : Number(lecturaAnterior), lecturaInicial: inicio, lecturaActual: inicio, lecturaCalculadaActual: inicio,
-          capacidadTanqueLitros: CAPACIDAD_TANQUE_LITROS, aguaCargadaLitros, aguaDisponibleLitros: aguaCargadaLitros, litrosRecargadosAcumulados: 0, litrosMedidos: null, litrosVendidos: 0, litrosVendidosAcumulados: 0, otrasSalidasLitros: 0, diferenciaLitros: null,
-          unidadComercial, litrosPorUnidad, incrementoContadorPorUnidad, precioPorUnidad, medidorDigitos: medidor.digitos, medidorLitrosPorIncremento: medidor.litrosPorIncremento, creadoOffline: typeof navigator !== 'undefined' && !navigator.onLine
-        });
-        tx.set(cargaInicialRef, {
-          jornadaId: jornadaRef.id, tipo: 'carga_inicial', litros: aguaCargadaLitros,
-          aguaDisponibleAntesLitros: 0, aguaDisponibleDespuesLitros: aguaCargadaLitros, aguaCargadaAcumuladaLitros: aguaCargadaLitros,
-          capacidadTanqueLitros: CAPACIDAD_TANQUE_LITROS, litrosRecargadosAcumulados: 0, localidadId: localidad.id, localidadNombre: localidad.nombre || '',
-          vehiculoId: vehiculo.id, vehiculoNombre: vehiculo.nombre || '', medidorId: medidor.id, medidorNombre: medidor.nombre || '',
-          jornadaEstado: 'abierta', fechaHora: fechaInicio, usuarioUid: currentUser.uid, usuarioNombre: currentUser.nombre || '',
-          repartidorId: currentUser.uid, repartidorNombre: currentUser.nombre || '', origen: 'apertura_jornada'
-        });
-        tx.set(lecturaInicialRef, {
-          jornadaId: jornadaRef.id, tipo: 'inicial', lecturaFisica: true, valor: inicio, valorAnterior: lecturaAnterior === null ? null : Number(lecturaAnterior),
-          fechaHora: fechaInicio, usuarioUid: currentUser.uid, usuarioNombre: currentUser.nombre || '',
-          localidadId: localidad.id, localidadNombre: localidad.nombre || '', vehiculo: vehiculo.nombre, vehiculoId: vehiculo.id, vehiculoNombre: vehiculo.nombre, medidorId: medidor.id, medidorNombre: medidor.nombre, medidorDigitos: medidor.digitos, medidorLitrosPorIncremento: medidor.litrosPorIncremento, operacion: 'apertura_jornada'
-        });
+      const jornadaData = {
+        estado: 'abierta', repartidorId: currentUser.uid, repartidorNombre: currentUser.nombre || '',
+        localidadId: localidad.id, localidadNombre: localidad.nombre || '', localidad: localidad.nombre || '', vehiculo: vehiculo.nombre, vehiculoId: vehiculo.id, vehiculoNombre: vehiculo.nombre, medidorId: medidor.id, medidorNombre: medidor.nombre,
+        lecturaAnterior: lecturaAnterior === null ? null : Number(lecturaAnterior), lecturaInicial: inicio, lecturaActual: inicio, lecturaCalculadaActual: inicio,
+        capacidadTanqueLitros: CAPACIDAD_TANQUE_LITROS, aguaCargadaLitros, aguaDisponibleLitros: aguaCargadaLitros, litrosRecargadosAcumulados: 0, litrosMedidos: null, litrosVendidos: 0, litrosVendidosAcumulados: 0, otrasSalidasLitros: 0, diferenciaLitros: null,
+        unidadComercial, litrosPorUnidad, incrementoContadorPorUnidad, precioPorUnidad, medidorDigitos: medidor.digitos, medidorLitrosPorIncremento: medidor.litrosPorIncremento, creadoOffline: typeof navigator !== 'undefined' && !navigator.onLine,
+        fechaInicio, creadoPorUid: currentUser.uid, creadoPorNombre: currentUser.nombre || ''
       };
-      if (typeof navigator !== 'undefined' && navigator.onLine) await db.runTransaction(async tx => escribirInicio(tx));
-      else { const batch = db.batch(); escribirInicio(batch); await batch.commit(); }
+      const cargaData = {
+        jornadaId, tipo: 'carga_inicial', litros: aguaCargadaLitros,
+        aguaDisponibleAntesLitros: 0, aguaDisponibleDespuesLitros: aguaCargadaLitros, aguaCargadaAcumuladaLitros: aguaCargadaLitros,
+        capacidadTanqueLitros: CAPACIDAD_TANQUE_LITROS, litrosRecargadosAcumulados: 0, localidadId: localidad.id, localidadNombre: localidad.nombre || '',
+        vehiculoId: vehiculo.id, vehiculoNombre: vehiculo.nombre || '', medidorId: medidor.id, medidorNombre: medidor.nombre || '',
+        jornadaEstado: 'abierta', fechaHora: fechaInicio, usuarioUid: currentUser.uid, usuarioNombre: currentUser.nombre || '',
+        repartidorId: currentUser.uid, repartidorNombre: currentUser.nombre || '', origen: 'apertura_jornada'
+      };
+      const lecturaData = {
+        jornadaId, tipo: 'inicial', lecturaFisica: true, valor: inicio, valorAnterior: lecturaAnterior === null ? null : Number(lecturaAnterior),
+        fechaHora: fechaInicio, usuarioUid: currentUser.uid, usuarioNombre: currentUser.nombre || '',
+        localidadId: localidad.id, localidadNombre: localidad.nombre || '', vehiculo: vehiculo.nombre, vehiculoId: vehiculo.id, vehiculoNombre: vehiculo.nombre, medidorId: medidor.id, medidorNombre: medidor.nombre, medidorDigitos: medidor.digitos, medidorLitrosPorIncremento: medidor.litrosPorIncremento, operacion: 'apertura_jornada'
+      };
+      const runtime = typeof window !== 'undefined' ? window : globalThis;
+      if (typeof runtime.appGuardarOperacionLocal !== 'function') throw new Error('El módulo local-first no está disponible');
+      const resultado = await runtime.appGuardarOperacionLocal({
+        idLocal: `inicio:${jornadaId}`,
+        operacionIdempotente: `inicio:${jornadaId}`,
+        tipoOperacion: 'inicio_jornada', jornadaId, localidadId: localidad.id, localidadNombre: localidad.nombre || '', vehiculoId: vehiculo.id, vehiculoNombre: vehiculo.nombre || '', medidorId: medidor.id, medidorNombre: medidor.nombre || '', repartidorUid: currentUser.uid, repartidorNombre: currentUser.nombre || '',
+        payload: { jornadaData, cargaId, cargaData, lecturaId, lecturaData }
+      });
       if (typeof appClearDraft === 'function') appClearDraft('jornada', currentUser?.uid);
       setForm({ localidadId: '', localidadNombre: '', vehiculoId: '', vehiculo: '', vehiculoNombre: '', medidorId: '', medidorNombre: '', lecturaInicial: '', aguaCargadaLitros: '' });
-      flash('Jornada iniciada');
+      flash(resultado.estado === 'pendiente_local' ? 'Jornada guardada en el teléfono; queda pendiente de sincronizar' : 'Jornada iniciada');
     } catch (e) { flash('No se pudo iniciar la jornada: ' + e.message); }
   };
   const actualizarOtrasSalidas = async (jornada, valor) => {
@@ -217,24 +253,27 @@ function JornadaMedidor({ localidades = [], jornadas = [], notas = [], clientes 
     const tipoDiferencia = Math.abs(diferenciaLitros) < 1e-9 ? 'sin_diferencia' : 'diferencia_merma_revision';
     try {
       const fechaCierre = new Date().toISOString();
-      const jornadaRef = db.collection('jornadas').doc(jornadaAbierta.id);
-      const lecturaFinalRef = db.collection('lecturas_medidor').doc(`${jornadaAbierta.id}-final`);
-      const escribirCierre = tx => {
-        tx.update(jornadaRef, {
-          estado: 'cerrada', lecturaActual: final, lecturaFinal: final, lecturaCalculadaFinal, incrementoContadorMedido, incrementoContadorCalculado, diferenciaContador, litrosMedidos, litrosCalculadosPorVentas, ventasRegistradas: operacionesJornada.length, serviciosMedidos: serviciosJornada.length,
-          litrosVendidos, resumenTarifas, diferenciaLitros, diferenciaLitrosFisicaContraCalculada, tipoDiferencia, aguaDisponibleLitros: Math.max(0, Number(jornadaAbierta.aguaDisponibleLitros || 0)), diferenciaGarrafones: Number(jornadaAbierta.litrosPorUnidad || FACTOR_LITROS_POR_GARRAFON) ? diferenciaLitros / Number(jornadaAbierta.litrosPorUnidad || FACTOR_LITROS_POR_GARRAFON) : null,
-          fechaCierre, usuarioCierreUid: currentUser.uid, usuarioCierreNombre: currentUser.nombre || '', explicacionDiferencia: ''
-        });
-        tx.set(lecturaFinalRef, {
-          jornadaId: jornadaAbierta.id, tipo: 'final', lecturaFisica: true, valor: final, lecturaCalculadaFinal, fechaHora: fechaCierre,
-          usuarioUid: currentUser.uid, usuarioNombre: currentUser.nombre || '', localidadId: jornadaAbierta.localidadId || '', localidadNombre: jornadaAbierta.localidadNombre || jornadaAbierta.localidad || '', vehiculo: jornadaAbierta.vehiculo || '', vehiculoId: jornadaAbierta.vehiculoId || jornadaAbierta.vehiculo || '', vehiculoNombre: jornadaAbierta.vehiculoNombre || jornadaAbierta.vehiculo || '',
-          medidorId: jornadaAbierta.medidorId || '', medidorNombre: jornadaAbierta.medidorNombre || '', medidorDigitos: jornadaAbierta.medidorDigitos ?? null, medidorLitrosPorIncremento: jornadaAbierta.medidorLitrosPorIncremento ?? null, operacion: 'cierre_jornada'
-        });
+      const runtime = typeof window !== 'undefined' ? window : globalThis;
+      if (typeof runtime.appGuardarOperacionLocal !== 'function') throw new Error('El módulo local-first no está disponible');
+      const jornadaPatch = {
+        estado: 'cerrada', lecturaActual: final, lecturaFinal: final, lecturaCalculadaFinal, incrementoContadorMedido, incrementoContadorCalculado, diferenciaContador, litrosMedidos, litrosCalculadosPorVentas, ventasRegistradas: operacionesJornada.length, serviciosMedidos: serviciosJornada.length,
+        litrosVendidos, resumenTarifas, diferenciaLitros, diferenciaLitrosFisicaContraCalculada, tipoDiferencia, aguaDisponibleLitros: Math.max(0, Number(jornadaAbierta.aguaDisponibleLitros || 0)), diferenciaGarrafones: Number(jornadaAbierta.litrosPorUnidad || FACTOR_LITROS_POR_GARRAFON) ? diferenciaLitros / Number(jornadaAbierta.litrosPorUnidad || FACTOR_LITROS_POR_GARRAFON) : null,
+        fechaCierre, usuarioCierreUid: currentUser.uid, usuarioCierreNombre: currentUser.nombre || '', explicacionDiferencia: ''
       };
-      if (typeof navigator !== 'undefined' && navigator.onLine) await db.runTransaction(async tx => escribirCierre(tx));
-      else { const batch = db.batch(); escribirCierre(batch); await batch.commit(); }
+      const lecturaData = {
+        jornadaId: jornadaAbierta.id, tipo: 'final', lecturaFisica: true, valor: final, lecturaCalculadaFinal, fechaHora: fechaCierre,
+        usuarioUid: currentUser.uid, usuarioNombre: currentUser.nombre || '', localidadId: jornadaAbierta.localidadId || '', localidadNombre: jornadaAbierta.localidadNombre || jornadaAbierta.localidad || '', vehiculo: jornadaAbierta.vehiculo || '', vehiculoId: jornadaAbierta.vehiculoId || jornadaAbierta.vehiculo || '', vehiculoNombre: jornadaAbierta.vehiculoNombre || jornadaAbierta.vehiculo || '',
+        medidorId: jornadaAbierta.medidorId || '', medidorNombre: jornadaAbierta.medidorNombre || '', medidorDigitos: jornadaAbierta.medidorDigitos ?? null, medidorLitrosPorIncremento: jornadaAbierta.medidorLitrosPorIncremento ?? null, operacion: 'cierre_jornada'
+      };
+      const resultado = await runtime.appGuardarOperacionLocal({
+        idLocal: `cierre:${jornadaAbierta.id}`,
+        operacionIdempotente: `cierre:${jornadaAbierta.id}`,
+        tipoOperacion: 'cierre_jornada', jornadaId: jornadaAbierta.id, localidadId: jornadaAbierta.localidadId || '', localidadNombre: jornadaAbierta.localidadNombre || jornadaAbierta.localidad || '',
+        vehiculoId: jornadaAbierta.vehiculoId || jornadaAbierta.vehiculo || '', vehiculoNombre: jornadaAbierta.vehiculoNombre || jornadaAbierta.vehiculo || '', medidorId: jornadaAbierta.medidorId || '', medidorNombre: jornadaAbierta.medidorNombre || '',
+        repartidorUid: currentUser.uid, repartidorNombre: currentUser.nombre || '', payload: { jornadaPatch, lecturaId: `${jornadaAbierta.id}-final`, lecturaData }
+      });
       setLecturaFinal('');
-      flash(`Jornada cerrada. Físico: ${litrosMedidos.toFixed(2)} L · Calculado por ventas: ${litrosCalculadosPorVentas.toFixed(2)} L · Diferencia: ${diferenciaLitros.toFixed(2)} L`);
+      flash(resultado.estado === 'pendiente_local' ? 'Cierre guardado en el teléfono; queda pendiente de sincronizar' : `Jornada cerrada. Físico: ${litrosMedidos.toFixed(2)} L · Calculado por ventas: ${litrosCalculadosPorVentas.toFixed(2)} L · Diferencia: ${diferenciaLitros.toFixed(2)} L`);
     } catch (e) { flash('No se pudo cerrar la jornada: ' + e.message); }
   };
   if (currentUser.role === 'admin') return React.createElement('div', { className: 'fx-page-jornada-admin fx-page-control', style: { padding: '16px 12px' } }, React.createElement('div', { className: 'fx-control-heading', style: { fontSize: 21, fontWeight: 800, marginBottom: 4 } }, 'Control'), React.createElement('div', { className: 'fx-control-intro', style: { color: 'var(--ink-soft)', fontSize: 12, lineHeight: 1.45, marginBottom: 14 } }, 'Consulta lecturas, litros medidos, ventas registradas y diferencias pendientes de explicación.'), (jornadas || []).filter(j => j.estado === 'cerrada').map(j => React.createElement('div', { className: 'fx-control-record', key: j.id, style: { background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, padding: 13, marginBottom: 9 } }, React.createElement('div', { className: 'fx-control-record-heading', style: { display: 'flex', justifyContent: 'space-between', gap: 8 } }, React.createElement('strong', null, j.localidadNombre || j.localidad || 'Sin localidad'), React.createElement('span', { style: { color: Number(j.diferenciaLitros || 0) === 0 ? 'var(--ok-text)' : 'var(--danger-text)', fontWeight: 800, fontSize: 12 } }, Number(j.diferenciaLitros || 0).toFixed(2), ' L diferencia')), React.createElement('div', { className: 'fx-control-record-context', style: { color: 'var(--ink-soft)', fontSize: 11, marginTop: 5 } }, j.repartidorNombre || 'Sin repartidor', ' · ', j.vehiculoNombre || j.vehiculo || 'Sin vehículo', ' · ', j.medidorNombre || 'Medidor'), React.createElement('div', { className: 'fx-control-record-detail', style: { fontSize: 12, marginTop: 8 } }, 'Inicial ', j.lecturaInicial, ' → Final físico ', j.lecturaFinal, ' · Calculada ', Number(j.lecturaCalculadaFinal ?? j.lecturaActual ?? 0).toFixed(2), ' · Diferencia física ', Number(j.diferenciaContador || 0).toFixed(2), ' contador · Físico ', Number(j.litrosMedidos || 0).toFixed(2), ' L · Ventas calculadas ', Number(j.litrosCalculadosPorVentas ?? j.litrosVendidos ?? 0).toFixed(2), ' L · Otras salidas ', Number(j.otrasSalidasLitros || 0).toFixed(2), ' L'), j.resumenTarifas?.length > 0 && React.createElement('div', { className: 'fx-control-tariffs', style: { marginTop: 9, padding: 9, background: 'var(--surface-2)', borderRadius: 8 } }, React.createElement('div', { style: { fontSize: 10, fontWeight: 800, color: 'var(--ink-faint)', letterSpacing: '.06em', marginBottom: 5 } }, 'VENTAS POR TARIFA'), j.resumenTarifas.map((t, i) => React.createElement('div', { key: t.tarifaId || i, style: { borderTop: i ? '1px solid var(--line)' : 'none', padding: '6px 0', fontSize: 11 } }, React.createElement('strong', null, t.tarifaNombre || 'Tarifa'), ' · ', Number(t.unidades || 0).toFixed(2), ' unidades · ', Number(t.litros || 0).toFixed(2), ' L · $', Number(t.precioUnitario || 0).toFixed(2), ' · Subtotal $', Number(t.subtotal || 0).toFixed(2), ' · Efectivo $', Number(t.efectivo || 0).toFixed(2), ' · Crédito $', Number(t.credito || 0).toFixed(2)))), React.createElement('input', { className: 'fx-control-field', type: 'number', min: 0, step: 0.01, defaultValue: j.otrasSalidasLitros || 0, placeholder: 'Otras salidas autorizadas (L)', onBlur: e => actualizarOtrasSalidas(j, e.target.value), style: { width: '100%', marginTop: 8, padding: 8, boxSizing: 'border-box', borderRadius: 7, border: '1px solid var(--line-strong)', background: 'var(--surface)', color: 'var(--ink)', fontSize: 11 } }), React.createElement('input', { className: 'fx-control-field', defaultValue: j.explicacionDiferencia || '', placeholder: 'Explicación de diferencia', onBlur: e => db.collection('jornadas').doc(j.id).update({ explicacionDiferencia: e.target.value.trim(), explicadoPorUid: currentUser.uid, explicadoEn: new Date().toISOString() }), style: { width: '100%', marginTop: 8, padding: 8, boxSizing: 'border-box', borderRadius: 7, border: '1px solid var(--line-strong)', background: 'var(--surface)', color: 'var(--ink)', fontSize: 11 } }))), (jornadas || []).filter(j => j.estado === 'cerrada').length === 0 && React.createElement('div', { style: { color: 'var(--ink-faint)', fontSize: 12 } }, 'No hay jornadas cerradas para conciliar todavía.'));

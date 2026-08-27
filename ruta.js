@@ -211,7 +211,7 @@ function FlujoChoferRapido({
   const aguaDisponibleNumero = Math.max(0, Number(aguaDisponibleRuta === '' ? (jornadaActiva?.aguaDisponibleLitros ?? aguaCargadaNumero) : aguaDisponibleRuta) || 0);
   const porcentajeAgua = capacidadTanqueRuta > 0 ? Math.max(0, Math.min(100, aguaDisponibleNumero / capacidadTanqueRuta * 100)) : 0;
   const estadosVentaOffline = ['pendiente', 'reintentando', 'requiere_revision', 'incidencia_inventario'];
-  const ventasOfflineJornada = (offlineVentaResumen.registros || []).filter(venta => venta.jornadaId === jornadaActiva?.id && estadosVentaOffline.includes(venta.estado));
+  const ventasOfflineJornada = (offlineVentaResumen.registros || []).filter(venta => venta.tipoOperacion === 'venta_agua_medidor' && venta.jornadaId === jornadaActiva?.id && estadosVentaOffline.includes(venta.estado));
   const ventasJornada = (notas || []).filter(venta => venta.jornadaId === jornadaActiva?.id).concat(ventasOfflineJornada);
   const serviciosJornadaIndicadores = serviciosJornada.map(servicio => ({ litrosVendidos: Number(servicio.medicion?.litrosRellenados || 0), garrafones: Number(servicio.venta?.garrafonesCobrables || servicio.medicion?.garrafonesEquivalentes || 0) }));
   const operacionesJornada = ventasJornada.concat(serviciosJornadaIndicadores);

@@ -62,7 +62,7 @@ function Sincronizacion({ currentUser = {}, isOnline = false, offlineVentaResume
 
   return React.createElement('div', { className: 'fx-page-sync', style: { padding: '16px 12px' } },
     React.createElement('div', { style: { fontSize: 20, fontWeight: 800, marginBottom: 4 } }, 'Sincronización'),
-    React.createElement('div', { style: { fontSize: 12, color: 'var(--ink-soft)', lineHeight: 1.45, marginBottom: 14 } }, 'La venta se guarda primero en este teléfono. Cuando hay internet, la cola se envía y se confirma en segundo plano o al solicitarlo.'),
+    React.createElement('div', { style: { fontSize: 12, color: 'var(--ink-soft)', lineHeight: 1.45, marginBottom: 14 } }, 'Cada operación de la jornada se guarda primero en este teléfono. Cuando hay internet, la cola se envía y se confirma en segundo plano o al solicitarlo.'),
     mensaje && React.createElement('div', { role: 'status', style: { background: 'var(--info-bg)', color: 'var(--info-text)', borderRadius: 8, padding: '10px 12px', marginBottom: 12, fontSize: 12, fontWeight: 700 } }, mensaje),
     React.createElement(Card, { style: { marginBottom: 12 } },
       React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 } },

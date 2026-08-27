@@ -12,7 +12,7 @@ function App() {
   const [abrirFormProducto, setAbrirFormProducto] = useState(false);
   const [abrirUsuarios, setAbrirUsuarios] = useState(false);
   const [abrirPrivacidad, setAbrirPrivacidad] = useState(false);
-  const [offlineVentaResumen, setOfflineVentaResumen] = useState({ total: 0, pendientes: 0, incidencias: 0, registros: [] });
+  const [offlineVentaResumen, setOfflineVentaResumen] = useState({ total: 0, pendientes: 0, incidencias: 0, registros: [], ventas: [], operaciones: [] });
   useEffect(() => {
     if (typeof appSuscribirVentasOffline !== 'function') return undefined;
     return appSuscribirVentasOffline(setOfflineVentaResumen);

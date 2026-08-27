@@ -35,80 +35,46 @@
   };
 
   const aplicarCarga = async ({ jornadaId, litros, usuario, tipo = 'recarga', jornadaBase = null }) => {
-    const firestore = obtenerDb();
-    if (!firestore) throw new Error('Firestore aún no está inicializado');
     const carga = normalizarCarga({ jornadaId, litros, usuario, tipo });
-    const jornadaRef = firestore.collection(nombreJornadas()).doc(carga.jornadaId);
-    const cargaRef = firestore.collection(nombreColeccion()).doc();
+    const base = jornadaBase && String(jornadaBase.id) === carga.jornadaId ? jornadaBase : null;
+    if (!base) throw new Error('No hay una copia local de la jornada para registrar la carga');
+    if (base.estado !== 'abierta') throw errorBloqueo('La jornada ya está cerrada', { tipo: 'jornada_cerrada' });
+    if (!base.repartidorId || base.repartidorId !== carga.usuario.uid) throw errorBloqueo('La carga no corresponde al repartidor de la jornada', { tipo: 'repartidor_no_autorizado' });
+    if (!base.localidadId || !base.vehiculoId || !base.medidorId) throw errorBloqueo('La jornada no tiene localidad, vehículo y medidor completos', { tipo: 'referencias_incompletas' });
+    const capacidadTanque = Number(base.capacidadTanqueLitros || CAPACIDAD_TANQUE_LITROS);
+    const aguaDisponibleAntesLitros = Number(base.aguaDisponibleLitros || 0);
+    const aguaCargadaAntes = Number(base.aguaCargadaLitros || 0);
+    const recargasAntes = Number(base.litrosRecargadosAcumulados || 0);
+    const aguaDisponibleDespuesLitros = aguaDisponibleAntesLitros + carga.litros;
+    const aguaCargadaDespues = aguaCargadaAntes + carga.litros;
+    if (capacidadTanque > CAPACIDAD_TANQUE_LITROS) throw errorBloqueo(`La capacidad del tanque no puede superar ${CAPACIDAD_TANQUE_LITROS.toLocaleString('es-MX')} L`, { tipo: 'capacidad_tanque_invalida', maximoLitros: CAPACIDAD_TANQUE_LITROS });
+    if (aguaDisponibleDespuesLitros > capacidadTanque) throw errorBloqueo(`La recarga excede el espacio disponible. Capacidad: ${capacidadTanque.toLocaleString('es-MX')} L`, { tipo: 'capacidad_tanque_excedida', capacidadTanqueLitros: capacidadTanque, disponibleAntesLitros: aguaDisponibleAntesLitros, litrosSolicitados: carga.litros });
+    const runtime = typeof window !== 'undefined' ? window : globalThis;
+    if (typeof runtime.appGuardarOperacionLocal !== 'function') throw new Error('El módulo local-first no está disponible');
     const fecha = new Date().toISOString();
-    let resultado = null;
-
-    const escribirCarga = (writer, jornada, usarIncrementos = false) => {
-      if (jornada.estado !== 'abierta') throw errorBloqueo('La jornada ya está cerrada', { tipo: 'jornada_cerrada' });
-      if (!jornada.repartidorId || jornada.repartidorId !== carga.usuario.uid) throw errorBloqueo('La recarga no corresponde al repartidor de la jornada', { tipo: 'repartidor_no_autorizado' });
-      if (!jornada.localidadId || !jornada.vehiculoId || !jornada.medidorId) throw errorBloqueo('La jornada no tiene localidad, vehículo y medidor completos', { tipo: 'referencias_incompletas' });
-
-      const capacidadTanque = Number(jornada.capacidadTanqueLitros || CAPACIDAD_TANQUE_LITROS);
-      const aguaDisponibleAntes = Number(jornada.aguaDisponibleLitros || 0);
-      const aguaCargadaAntes = Number(jornada.aguaCargadaLitros || 0);
-      const recargasAntes = Number(jornada.litrosRecargadosAcumulados || 0);
-      const aguaDisponibleDespues = aguaDisponibleAntes + carga.litros;
-      const aguaCargadaDespues = aguaCargadaAntes + carga.litros;
-      if (capacidadTanque > CAPACIDAD_TANQUE_LITROS) throw errorBloqueo(`La capacidad del tanque no puede superar ${CAPACIDAD_TANQUE_LITROS.toLocaleString('es-MX')} L`, { tipo: 'capacidad_tanque_invalida', maximoLitros: CAPACIDAD_TANQUE_LITROS });
-      if (aguaDisponibleDespues > capacidadTanque) throw errorBloqueo(`La recarga excede el espacio disponible. Capacidad: ${capacidadTanque.toLocaleString('es-MX')} L`, { tipo: 'capacidad_tanque_excedida', capacidadTanqueLitros: capacidadTanque, disponibleAntesLitros: aguaDisponibleAntes, litrosSolicitados: carga.litros });
-      const datosCarga = {
-        jornadaId: carga.jornadaId,
-        tipo: carga.tipo,
-        litros: carga.litros,
-        aguaDisponibleAntesLitros: aguaDisponibleAntes,
-        aguaDisponibleDespuesLitros: aguaDisponibleDespues,
-        aguaCargadaAcumuladaLitros: aguaCargadaDespues,
-        litrosRecargadosAcumulados: recargasAntes + carga.litros,
-        capacidadTanqueLitros: capacidadTanque,
-        localidadId: jornada.localidadId,
-        localidadNombre: jornada.localidadNombre || jornada.localidad || '',
-        vehiculoId: jornada.vehiculoId,
-        vehiculoNombre: jornada.vehiculoNombre || jornada.vehiculo || '',
-        medidorId: jornada.medidorId,
-        medidorNombre: jornada.medidorNombre || '',
-        jornadaEstado: jornada.estado,
-        fechaHora: fecha,
-        usuarioUid: carga.usuario.uid,
-        usuarioNombre: carga.usuario.nombre || '',
-        repartidorId: carga.usuario.uid,
-        repartidorNombre: carga.usuario.nombre || '',
-        origen: estaEnLinea() ? 'jornada_repartidor' : 'jornada_repartidor_offline'
-      };
-      writer.set(cargaRef, datosCarga);
-      const delta = usarIncrementos ? incrementoAtómico(carga.litros) : null;
-      writer.update(jornadaRef, {
-        capacidadTanqueLitros: capacidadTanque,
-        aguaDisponibleLitros: delta || aguaDisponibleDespues,
-        aguaCargadaLitros: delta || aguaCargadaDespues,
-        litrosRecargadosAcumulados: delta || recargasAntes + carga.litros,
-        ultimaRecargaId: cargaRef.id,
-        ultimaRecargaLitros: carga.litros,
-        ultimaRecargaEn: fecha,
-        actualizadoEn: fecha
-      });
-      resultado = { estado: estaEnLinea() ? 'confirmada' : 'pendiente_local', cargaId: cargaRef.id, litros: carga.litros, aguaDisponibleLitros: aguaDisponibleDespues };
-      return resultado;
+    const cargaId = `carga-${carga.jornadaId}-${typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)}`;
+    const cargaData = {
+      idLocal: `recarga:${cargaId}`, jornadaId: carga.jornadaId, tipo: carga.tipo, litros: carga.litros,
+      aguaDisponibleAntesLitros, aguaDisponibleDespuesLitros, aguaCargadaAcumuladaLitros: aguaCargadaDespues,
+      litrosRecargadosAcumulados: recargasAntes + carga.litros, capacidadTanqueLitros: capacidadTanque,
+      localidadId: base.localidadId, localidadNombre: base.localidadNombre || base.localidad || '', vehiculoId: base.vehiculoId,
+      vehiculoNombre: base.vehiculoNombre || base.vehiculo || '', medidorId: base.medidorId, medidorNombre: base.medidorNombre || '',
+      jornadaEstado: 'abierta', fechaHora: fecha, usuarioUid: carga.usuario.uid, usuarioNombre: carga.usuario.nombre || '',
+      repartidorId: carga.usuario.uid, repartidorNombre: carga.usuario.nombre || '', origen: estaEnLinea() ? 'jornada_repartidor' : 'jornada_repartidor_offline'
     };
-
-    if (estaEnLinea()) {
-      await firestore.runTransaction(async tx => {
-        const jornadaSnap = await tx.get(jornadaRef);
-        if (!jornadaSnap.exists) throw errorBloqueo('La jornada no existe', { tipo: 'jornada_no_encontrada' });
-        escribirCarga(tx, { id: jornadaSnap.id, ...jornadaSnap.data() });
-      });
-    } else {
-      const base = jornadaBase && String(jornadaBase.id) === carga.jornadaId ? jornadaBase : null;
-      if (!base) throw new Error('No hay una copia local de la jornada para registrar la recarga sin conexión');
-      const batch = firestore.batch();
-      escribirCarga(batch, base, true);
-      await batch.commit();
-    }
-    return resultado;
+    const jornadaPatch = {
+      capacidadTanqueLitros: capacidadTanque, aguaDisponibleLitros: aguaDisponibleDespuesLitros, aguaCargadaLitros: aguaCargadaDespues,
+      litrosRecargadosAcumulados: recargasAntes + carga.litros, ultimaRecargaId: cargaId, ultimaRecargaLitros: carga.litros,
+      ultimaRecargaEn: fecha, actualizadoEn: fecha
+    };
+    return runtime.appGuardarOperacionLocal({
+      idLocal: `recarga:${carga.jornadaId}:${cargaId}`,
+      operacionIdempotente: `recarga:${carga.jornadaId}:${cargaId}`,
+      tipoOperacion: 'recarga_agua', jornadaId: carga.jornadaId, localidadId: base.localidadId, localidadNombre: base.localidadNombre || base.localidad || '',
+      vehiculoId: base.vehiculoId, vehiculoNombre: base.vehiculoNombre || base.vehiculo || '', medidorId: base.medidorId, medidorNombre: base.medidorNombre || '',
+      repartidorUid: carga.usuario.uid, repartidorNombre: carga.usuario.nombre || '',
+      payload: { cargaId, cargaData, aguaDisponibleAntesLitros, jornadaPatch }
+    });
   };
 
   global.appRegistrarRecargaAgua = aplicarCarga;

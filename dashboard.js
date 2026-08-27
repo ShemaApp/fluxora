@@ -21,7 +21,7 @@ function Dashboard({ notas = [], productos = [], creditos = [], clientes = [], j
   if (isRepartidor) {
     const notasJornada = jornadaActiva ? (notas || []).filter(n => n.jornadaId === jornadaActiva.id && n.capturadoPorUid === currentUser.uid) : [];
     const estadosPendientes = ['pendiente', 'reintentando', 'requiere_revision', 'incidencia_inventario'];
-    const ventasOfflineJornada = jornadaActiva ? (offlineVentaResumen.registros || []).filter(v => v.jornadaId === jornadaActiva.id && estadosPendientes.includes(v.estado)) : [];
+    const ventasOfflineJornada = jornadaActiva ? (offlineVentaResumen.registros || []).filter(v => v.tipoOperacion === 'venta_agua_medidor' && v.jornadaId === jornadaActiva.id && estadosPendientes.includes(v.estado)) : [];
     const ventasJornada = notasJornada.concat(ventasOfflineJornada);
     const litrosDeVentas = ventasJornada.reduce((suma, venta) => suma + Number(venta.litrosVendidos || (venta.items || []).reduce((subtotal, item) => subtotal + Number(item.litrosVendidos || item.litros || 0), 0)), 0);
     const litrosVendidosRemotos = Number(jornadaActiva?.litrosVendidosAcumulados ?? jornadaActiva?.litrosVendidos ?? 0);
