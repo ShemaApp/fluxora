@@ -232,7 +232,7 @@ function App() {
       padding: '6px 12px',
       boxSizing: 'border-box'
     }
-  }, !isOnline ? `Sin conexión — puedes seguir trabajando, se sincroniza solo${pendientesTotales > 0 ? ` (${pendientesTotales} en cola)` : ''}` : pendientesTotales > 0 ? `Sincronizando ${pendientesTotales} cambio${pendientesTotales === 1 ? '' : 's'}…${persistenciaNoDisponible ? ' · almacenamiento no persistente' : ''}` : 'Almacenamiento local no persistente: evita borrar los datos del sitio'), React.createElement("main", {
+  }, !isOnline ? `Sin conexión — puedes seguir trabajando, las operaciones se sincronizarán después${pendientesTotales > 0 ? ` (${pendientesTotales} en cola)` : ''}` : pendientesTotales > 0 ? `Sincronizando ${pendientesTotales} operación${pendientesTotales === 1 ? '' : 'es'}…${persistenciaNoDisponible ? ' · almacenamiento no persistente' : ''}` : 'Almacenamiento local no persistente: evita borrar los datos del sitio'), React.createElement("main", {
     className: 'app-main-content'
   }, firestoreError && React.createElement("div", {
     style: {

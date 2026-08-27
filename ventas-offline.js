@@ -139,14 +139,18 @@
   const uid = () => global.crypto?.randomUUID?.() || 'off-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
 
   const erroresDeRegistros = registros => (registros || [])
-    .filter(record => record && (record.ultimoError || record.syncStatus === 'error' || record.estado === 'requiere_revision'))
+    .filter(record => record && (record.ultimoError || ['error', 'blocked', 'conflict'].includes(record.syncStatus) || ['requiere_revision', 'bloqueada', 'conflicto'].includes(record.estado)))
     .sort((a, b) => new Date(b.updatedOfflineAt || b.actualizadoEn || b.creadoEn || 0) - new Date(a.updatedOfflineAt || a.actualizadoEn || a.creadoEn || 0))
     .slice(0, 20)
     .map(record => ({
       idLocal: record.idLocal || record.id,
-      ventaId: record.id,
+      operacionId: record.id,
+      ventaId: record.tipoOperacion === 'venta_agua_medidor' ? record.id : null,
+      tipoOperacion: record.tipoOperacion || record.operationType || 'operacion',
       syncStatus: record.syncStatus || record.estado || 'error',
+      estado: record.estado || null,
       mensaje: record.ultimoError || 'La operación requiere revisión',
+      detalle: record.bloqueoDetalle || null,
       fecha: record.updatedOfflineAt || record.actualizadoEn || record.creadoEn || null,
       jornadaId: record.jornadaId || null
     }));
@@ -215,6 +219,8 @@
       operacionIdempotente: String(payload.operacionIdempotente || ventaId),
       modoOperacion: 'agua_medidor',
       tipoOperacion: 'venta_agua_medidor',
+      operationType: 'venta_agua_medidor',
+      actorUid: String(payload.repartidorUid),
       estado: 'pendiente',
       syncStatus: 'pending',
       version: 2,
@@ -284,6 +290,8 @@
       operacionIdempotente: String(payload.operacionIdempotente || idLocal),
       modoOperacion: 'jornada_operativa',
       tipoOperacion,
+      operationType: tipoOperacion,
+      actorUid: String(payload.repartidorUid),
       estado: 'pendiente',
       syncStatus: 'pending',
       version: 2,
@@ -623,8 +631,19 @@
       return { ...resultado, idLocal: reintentando.idLocal || reintentando.id, syncStatus: 'synced' };
     } catch (error) {
       if (error.__appBloqueo === true) {
-        await deleteRecord(reintentando.id);
-        return { estado: 'bloqueada', ventaId: reintentando.id, idLocal: reintentando.idLocal || reintentando.id, error: error.message };
+        const actualizadoBloqueo = new Date().toISOString();
+        const bloqueo = {
+          ...reintentando,
+          estado: 'bloqueada',
+          syncStatus: 'blocked',
+          ultimoError: error.message,
+          bloqueoDetalle: error.__appDetalle || null,
+          errorHistorial: [...(reintentando.errorHistorial || []), { tipo: 'bloqueo', mensaje: error.message, detalle: error.__appDetalle || null, fecha: actualizadoBloqueo, codigo: error?.code || null }].slice(-10),
+          actualizadoEn: actualizadoBloqueo,
+          updatedOfflineAt: actualizadoBloqueo
+        };
+        await putRecord(bloqueo);
+        return { estado: 'bloqueada', operacionId: reintentando.id, ventaId: reintentando.tipoOperacion === 'venta_agua_medidor' ? reintentando.id : null, idLocal: reintentando.idLocal || reintentando.id, error: error.message, syncStatus: 'blocked', tipoOperacion: reintentando.tipoOperacion };
       }
       if (esIncidencia(error)) {
         const resultado = await registrarIncidenciaSinTransaccion(reintentando, error);
@@ -651,12 +670,12 @@
           const r = await processOne(record);
           if (r.estado === 'incidencia_agua') {
             resultado.incidencias++;
-            resultado.errores.push({ idLocal: r.idLocal || r.ventaId, ventaId: r.ventaId, syncStatus: 'synced_with_incident', mensaje: 'La venta se sincronizó y requiere revisión de conciliación', fecha: new Date().toISOString() });
+            resultado.errores.push({ idLocal: r.idLocal || r.operacionId || r.ventaId, operacionId: r.operacionId || r.ventaId, ventaId: r.ventaId || null, tipoOperacion: record.tipoOperacion || record.operationType || 'operacion', syncStatus: 'synced_with_incident', mensaje: 'La operación se sincronizó y requiere revisión de conciliación', fecha: new Date().toISOString() });
           } else if (r.estado === 'confirmada' || r.estado === 'pendiente_local') resultado.sincronizadas++;
-          else if (r.estado === 'bloqueada') resultado.errores.push({ idLocal: r.idLocal || r.ventaId, ventaId: r.ventaId, syncStatus: 'blocked', mensaje: r.error, fecha: new Date().toISOString() });
+          else if (r.estado === 'bloqueada') resultado.errores.push({ idLocal: r.idLocal || r.operacionId || r.ventaId, operacionId: r.operacionId || r.ventaId, ventaId: r.ventaId || null, tipoOperacion: record.tipoOperacion || record.operationType || 'operacion', syncStatus: 'blocked', mensaje: r.error, fecha: new Date().toISOString() });
         } catch (error) {
           resultado.pendientes++;
-          resultado.errores.push({ idLocal: record.idLocal || record.id, ventaId: record.id, syncStatus: 'error', mensaje: error.message, fecha: new Date().toISOString() });
+          resultado.errores.push({ idLocal: record.idLocal || record.id, operacionId: record.id, ventaId: record.tipoOperacion === 'venta_agua_medidor' ? record.id : null, tipoOperacion: record.tipoOperacion || record.operationType || 'operacion', syncStatus: 'error', mensaje: error.message, fecha: new Date().toISOString() });
           break;
         }
       }
@@ -676,10 +695,11 @@
     return {
       total: records.length,
       pendientes: records.filter(record => RETRY_STATES.includes(record.estado)).length,
-      incidencias: records.filter(record => record.estado === 'requiere_revision').length,
+      incidencias: records.filter(record => record.estado === 'requiere_revision' || record.estado === 'bloqueada' || record.estado === 'conflicto' || record.syncStatus === 'blocked' || record.syncStatus === 'conflict').length,
       registros: records,
       ventas: records.filter(record => record.tipoOperacion === 'venta_agua_medidor'),
-      operaciones: records
+      operaciones: records,
+      operacionesLocales: records
     };
   };
   const subscribe = callback => {
@@ -701,9 +721,13 @@
   global.appSincronizarVentasOffline = sincronizar;
   global.appVentasPendientesJornada = pendientesJornada;
   global.appResumenVentasOffline = resumen;
+  global.appResumenOperacionesOffline = resumen;
   global.appSuscribirVentasOffline = subscribe;
+  global.appSuscribirOperacionesOffline = subscribe;
   global.appObtenerEstadoSincronizacion = obtenerEstadoSincronizacion;
   global.appSuscribirSincronizacion = subscribeSync;
+  global.appSincronizarOperacionesOffline = sincronizar;
+  global.appOperacionesPendientesJornada = pendientesJornada;
   global.addEventListener('online', () => setTimeout(() => sincronizar(), 250));
   try {
     global.firebase?.auth?.().onAuthStateChanged(user => {
