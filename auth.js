@@ -41,36 +41,37 @@ function Login() {
       padding: 28,
       background: 'var(--bg)'
     }
-  }, React.createElement("img", {
+  }, React.createElement("section", {
+    className: 'fx-login-brand-panel',
+    "aria-label": "Identidad de FLUXORA"
+  }, React.createElement("div", {
+    className: 'fx-login-brand-art',
+    "aria-hidden": "true"
+  }), React.createElement("img", {
     className: 'fx-login-logo-img',
     src: 'assets/brand/fluxora-logo.svg',
     alt: 'FLUXORA — Medición, Distribución, Control',
-    "aria-label": `Emblema de ${NEGOCIO.nombre}`,
-    style: {
-      fontSize: 56,
-      lineHeight: 1,
-      marginBottom: 8
-    }
+    "aria-label": `Emblema de ${NEGOCIO.nombre}`
   }), React.createElement("div", {
-    className: 'fx-login-brand-name',
-    style: {
-      fontSize: 22,
-      fontWeight: 700,
-      marginBottom: 2,
-      fontFamily: 'var(--font-display)',
-      textTransform: 'uppercase',
-      letterSpacing: '.02em'
-    }
-  }, NEGOCIO.nombre), React.createElement("div", {
-    style: {
-      fontSize: 12,
-      color: 'var(--ink-faint)',
-      marginBottom: 36,
-      fontFamily: 'var(--font-mono)',
-      textTransform: 'uppercase',
-      letterSpacing: '.08em'
-    }
-  }, "Panel de administración"), React.createElement("div", {
+    className: 'fx-login-brand-rule',
+    "aria-hidden": "true"
+  }), React.createElement("h1", {
+    className: 'fx-login-brand-headline'
+  }, "Medición, distribución y control"), React.createElement("p", {
+    className: 'fx-login-brand-copy'
+  }, "Precisión para cada operación.")), React.createElement("section", {
+    className: 'fx-login-form-column',
+    "aria-label": "Acceso al sistema"
+  }, React.createElement("div", {
+    className: 'fx-login-form-content'
+  }, React.createElement("div", {
+    className: 'fx-login-form-kicker'
+  }, "Acceso al sistema"), React.createElement("div", {
+    className: 'fx-login-form-rule',
+    "aria-hidden": "true"
+  }), React.createElement("p", {
+    className: 'fx-login-form-subtitle'
+  }, "Ingresa tus credenciales para continuar."), React.createElement("div", {
     className: 'fx-login-panel',
     style: {
       width: '100%',
@@ -81,7 +82,12 @@ function Login() {
       borderRadius: 4,
       padding: 24
     }
-  }, React.createElement(Lbl, null, "Correo electrónico"), React.createElement(Inp, {
+  }, React.createElement("div", {
+    className: 'fx-login-field fx-login-field-email'
+  }, React.createElement("span", {
+    className: 'fx-login-input-icon fx-login-input-icon-mail',
+    "aria-hidden": "true"
+  }), React.createElement(Lbl, null, "Correo electrónico"), React.createElement(Inp, {
     type: "email",
     value: email,
     onChange: e => setEmail(e.target.value),
@@ -90,10 +96,15 @@ function Login() {
       marginBottom: 12
     },
     autoComplete: "username"
+  })), React.createElement("div", {
+    className: 'fx-login-field fx-login-field-password'
+  }, React.createElement("span", {
+    className: 'fx-login-input-icon fx-login-input-icon-lock',
+    "aria-hidden": "true"
   }), React.createElement(Lbl, null, "Contraseña"), React.createElement(PwInp, {
     value: pw,
     onChange: e => setPw(e.target.value)
-  }), err && React.createElement("div", {
+  })), err && React.createElement("div", {
     style: {
       fontSize: 12,
       color: 'var(--danger-text)',
@@ -151,7 +162,9 @@ function Login() {
       fontWeight: 700,
       textDecoration: 'underline'
     }
-  }, "Uso confidencial del equipo móvil")))));
+  }, "Uso confidencial del equipo móvil")))), React.createElement("div", {
+    className: 'fx-login-footer'
+  }, "© 2026 Fluxora. Todos los derechos reservados."))));
 }
 function PinPad({
   len = 4,

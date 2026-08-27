@@ -2979,3 +2979,410 @@ body::before { display: none !important; }
   .fx-import-actions .fx-btn-fill,
   .fx-import-actions .fx-btn-outline { min-height: 42px !important; }
 }
+
+
+/* Login de escritorio — composición basada en referencia visual proporcionada. */
+.fx-login-shell {
+  display: grid !important;
+  grid-template-columns: minmax(0, 56%) minmax(390px, 44%) !important;
+  align-items: stretch !important;
+  min-height: 100vh !important;
+  padding: 0 !important;
+  background: #f4f5f6 !important;
+  color: #16384b !important;
+  overflow: hidden !important;
+}
+
+.fx-login-shell::before {
+  display: none !important;
+}
+
+.fx-login-shell::after {
+  content: none !important;
+}
+
+.fx-login-brand-panel {
+  position: relative !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  justify-content: center !important;
+  min-width: 0 !important;
+  min-height: 100vh !important;
+  padding: 8vh clamp(42px, 8vw, 132px) 10vh !important;
+  overflow: hidden !important;
+  isolation: isolate !important;
+  background: #104764 !important;
+  color: #ffffff !important;
+}
+
+.fx-login-brand-panel::before,
+.fx-login-brand-panel::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.fx-login-brand-panel::before {
+  inset: 0;
+  opacity: .34;
+  background-image:
+    linear-gradient(90deg, rgba(152,220,239,.20) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(152,220,239,.16) 1px, transparent 1px),
+    linear-gradient(135deg, transparent 0 49.7%, rgba(152,220,239,.18) 50%, transparent 50.3%);
+  background-size: 76px 76px, 76px 76px, 190px 190px;
+  mask-image: linear-gradient(180deg, #000 0%, rgba(0,0,0,.78) 48%, transparent 100%);
+}
+
+.fx-login-brand-panel::after {
+  width: min(510px, 42vw);
+  height: min(510px, 42vw);
+  right: -8%;
+  bottom: -18%;
+  opacity: .22;
+  border: 1px solid rgba(139,224,246,.68);
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 34px transparent,
+    0 0 0 35px rgba(139,224,246,.44),
+    0 0 0 92px transparent,
+    0 0 0 93px rgba(139,224,246,.28),
+    0 0 0 150px transparent,
+    0 0 0 151px rgba(139,224,246,.18);
+}
+
+.fx-login-brand-art {
+  position: absolute !important;
+  top: 34px !important;
+  left: 34px !important;
+  width: 250px !important;
+  height: 250px !important;
+  opacity: .24 !important;
+  border-left: 1px solid rgba(139,224,246,.75) !important;
+  border-bottom: 1px solid rgba(139,224,246,.75) !important;
+  pointer-events: none !important;
+  transform: skewY(-18deg) !important;
+}
+
+.fx-login-brand-art::before,
+.fx-login-brand-art::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.fx-login-brand-art::before {
+  top: 20px;
+  left: 20px;
+  width: 118px;
+  height: 118px;
+  border: 1px solid rgba(139,224,246,.75);
+  border-radius: 50%;
+  box-shadow: 0 0 0 25px transparent, 0 0 0 26px rgba(139,224,246,.55), 0 0 0 51px transparent, 0 0 0 52px rgba(139,224,246,.36);
+}
+
+.fx-login-brand-art::after {
+  top: 103px;
+  left: 0;
+  width: 270px;
+  border-top: 1px dashed rgba(139,224,246,.60);
+}
+
+.fx-login-brand-panel .fx-login-logo-img {
+  z-index: 1 !important;
+  display: block !important;
+  width: min(610px, 100%) !important;
+  height: auto !important;
+  max-height: 170px !important;
+  object-fit: contain !important;
+  object-position: left center !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.fx-login-brand-rule {
+  width: 132px !important;
+  height: 4px !important;
+  margin: 34px 0 30px !important;
+  background: #eead18 !important;
+}
+
+.fx-login-brand-headline {
+  max-width: 720px !important;
+  margin: 0 !important;
+  color: #ffffff !important;
+  font-family: var(--font-display), Arial, sans-serif !important;
+  font-size: clamp(28px, 3.15vw, 50px) !important;
+  line-height: 1.12 !important;
+  font-weight: 800 !important;
+  letter-spacing: -.035em !important;
+  text-transform: none !important;
+}
+
+.fx-login-brand-copy {
+  margin: 16px 0 0 !important;
+  color: rgba(235,248,252,.78) !important;
+  font-family: var(--font-body), Arial, sans-serif !important;
+  font-size: clamp(16px, 1.3vw, 23px) !important;
+  line-height: 1.35 !important;
+  letter-spacing: .01em !important;
+}
+
+.fx-login-form-column {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  min-width: 0 !important;
+  min-height: 100vh !important;
+  padding: 9vh clamp(44px, 8vw, 124px) 48px !important;
+  background: #f5f5f5 !important;
+  color: #1b3c50 !important;
+}
+
+.fx-login-form-content {
+  width: min(100%, 430px) !important;
+  margin: auto 0 !important;
+}
+
+.fx-login-form-kicker {
+  margin: 0 !important;
+  color: #183d52 !important;
+  font-family: var(--font-display), Arial, sans-serif !important;
+  font-size: clamp(25px, 2.05vw, 38px) !important;
+  line-height: 1.15 !important;
+  font-weight: 800 !important;
+  letter-spacing: .01em !important;
+  text-transform: uppercase !important;
+}
+
+.fx-login-form-rule {
+  width: 78px !important;
+  height: 4px !important;
+  margin: 24px 0 24px !important;
+  background: #e9aa16 !important;
+}
+
+.fx-login-form-subtitle {
+  margin: 0 0 40px !important;
+  color: #72767a !important;
+  font-family: var(--font-body), Arial, sans-serif !important;
+  font-size: 16px !important;
+  line-height: 1.4 !important;
+}
+
+.fx-login-form-column .fx-login-panel {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-top: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.fx-login-form-column .fx-login-panel .fx-label {
+  margin: 0 0 10px !important;
+  color: #40505a !important;
+  font-family: var(--font-display), Arial, sans-serif !important;
+  font-size: 12px !important;
+  letter-spacing: .09em !important;
+  font-weight: 800 !important;
+}
+
+.fx-login-form-column .fx-login-panel .fx-input {
+  min-height: 56px !important;
+  margin-bottom: 25px !important;
+  padding: 0 16px !important;
+  background: rgba(255,255,255,.38) !important;
+  border: 1px solid #a9abad !important;
+  border-radius: 5px !important;
+  color: #1d3544 !important;
+  font-family: var(--font-body), Arial, sans-serif !important;
+  font-size: 16px !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.fx-login-form-column .fx-login-panel .fx-input::placeholder {
+  color: #8e9194 !important;
+  opacity: 1 !important;
+}
+
+.fx-login-form-column .fx-login-panel .fx-input:focus {
+  border-color: #1c6a8a !important;
+  box-shadow: 0 0 0 3px rgba(28,106,138,.12) !important;
+}
+
+.fx-login-form-column .fx-login-panel > div[style*="position: relative"] {
+  margin-bottom: 29px !important;
+}
+
+.fx-login-form-column .fx-login-panel > div[style*="position: relative"] .fx-input {
+  margin-bottom: 0 !important;
+}
+
+.fx-login-form-column .fx-login-panel > div[style*="position: relative"] button {
+  right: 15px !important;
+  color: #767d81 !important;
+}
+
+.fx-login-form-column .fx-login-panel button.fx-btn-fill {
+  min-height: 58px !important;
+  margin-top: 2px !important;
+  padding: 0 20px !important;
+  background: #eead18 !important;
+  color: #182b37 !important;
+  border: 0 !important;
+  border-radius: 4px !important;
+  box-shadow: none !important;
+  font-family: var(--font-display), Arial, sans-serif !important;
+  font-size: 16px !important;
+  font-weight: 800 !important;
+  letter-spacing: .025em !important;
+}
+
+.fx-login-form-column .fx-login-panel button.fx-btn-fill:disabled {
+  opacity: .62 !important;
+}
+
+.fx-login-form-column .fx-login-panel > div[style*="danger-text"] {
+  margin: -8px 0 14px !important;
+  color: #a63831 !important;
+  text-align: left !important;
+}
+
+.fx-login-links {
+  display: none !important;
+}
+
+.fx-login-footer {
+  flex: 0 0 auto !important;
+  margin-top: 36px !important;
+  color: #6e7275 !important;
+  font-family: var(--font-body), Arial, sans-serif !important;
+  font-size: 14px !important;
+  line-height: 1.4 !important;
+  text-align: center !important;
+}
+
+@media (max-width: 900px) and (min-width: 768px) {
+  .fx-login-shell {
+    grid-template-columns: minmax(0, 51%) minmax(350px, 49%) !important;
+  }
+  .fx-login-brand-panel { padding-left: 48px !important; padding-right: 40px !important; }
+  .fx-login-form-column { padding-left: 42px !important; padding-right: 42px !important; }
+  .fx-login-brand-headline { font-size: 29px !important; }
+  .fx-login-brand-copy { font-size: 16px !important; }
+}
+
+@media (max-width: 767px) {
+  .fx-login-shell {
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 100vh !important;
+    overflow: auto !important;
+  }
+  .fx-login-brand-panel {
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 42vh !important;
+    padding: 42px 24px 38px !important;
+    text-align: center !important;
+  }
+  .fx-login-brand-art { top: 14px !important; left: 12px !important; transform: scale(.72) skewY(-18deg) !important; transform-origin: top left !important; }
+  .fx-login-brand-panel::after { width: 260px !important; height: 260px !important; right: -17% !important; bottom: -27% !important; }
+  .fx-login-brand-panel .fx-login-logo-img { width: min(350px, 88vw) !important; max-height: 104px !important; object-position: center !important; }
+  .fx-login-brand-rule { width: 84px !important; height: 3px !important; margin: 24px auto 18px !important; }
+  .fx-login-brand-headline { max-width: 380px !important; font-size: clamp(22px, 7vw, 30px) !important; }
+  .fx-login-brand-copy { font-size: 15px !important; }
+  .fx-login-form-column {
+    min-height: 58vh !important;
+    padding: 46px 24px 28px !important;
+  }
+  .fx-login-form-content { width: 100% !important; margin: 0 auto !important; }
+  .fx-login-form-kicker { font-size: 26px !important; }
+  .fx-login-form-rule { margin: 17px 0 17px !important; }
+  .fx-login-form-subtitle { margin-bottom: 30px !important; font-size: 14px !important; }
+  .fx-login-form-column .fx-login-panel .fx-input { min-height: 52px !important; margin-bottom: 21px !important; font-size: 15px !important; }
+  .fx-login-form-column .fx-login-panel button.fx-btn-fill { min-height: 54px !important; font-size: 15px !important; }
+  .fx-login-footer { margin-top: 36px !important; font-size: 12px !important; }
+}
+
+
+/* Ajustes finales del formulario de acceso. */
+.fx-login-field {
+  position: relative !important;
+}
+
+.fx-login-input-icon {
+  position: absolute !important;
+  z-index: 2 !important;
+  left: 16px !important;
+  top: 42px !important;
+  width: 18px !important;
+  height: 16px !important;
+  pointer-events: none !important;
+  opacity: .72 !important;
+}
+
+.fx-login-field-email .fx-login-input-icon-mail {
+  border: 2px solid #788187 !important;
+  border-radius: 2px !important;
+}
+
+.fx-login-field-email .fx-login-input-icon-mail::after {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 1px;
+  width: 10px;
+  height: 10px;
+  border-left: 2px solid #788187;
+  border-bottom: 2px solid #788187;
+  transform: rotate(-45deg) scale(.66);
+  transform-origin: center;
+}
+
+.fx-login-field-password .fx-login-input-icon-lock {
+  width: 14px !important;
+  height: 13px !important;
+  top: 43px !important;
+  left: 18px !important;
+  border: 2px solid #788187 !important;
+  border-radius: 2px !important;
+}
+
+.fx-login-field-password .fx-login-input-icon-lock::before {
+  content: "";
+  position: absolute;
+  left: 1px;
+  top: -10px;
+  width: 8px;
+  height: 11px;
+  border: 2px solid #788187;
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+}
+
+.fx-login-form-column .fx-login-field .fx-label,
+.fx-login-form-column .fx-login-field .fx-input {
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+.fx-login-form-column .fx-login-field .fx-input {
+  padding-left: 52px !important;
+}
+
+.fx-login-brand-panel .fx-login-logo-img {
+  background: rgba(255,255,255,.94) !important;
+  padding: 12px 18px !important;
+  border-radius: 5px !important;
+}
