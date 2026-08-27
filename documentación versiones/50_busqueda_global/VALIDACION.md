@@ -2,7 +2,7 @@
 
 ## Resultado general
 
-**Estado: validación funcional local completada; publicación pendiente de commit y verificación remota.**
+**Estado: validación funcional y publicación completadas.**
 
 La prueba confirma que el buscador se monta en la shell autenticada y que no aparece en el login. La navegación de resultados mantiene los destinos permitidos por rol y la indexación no consulta Firestore durante la escritura.
 
@@ -16,6 +16,7 @@ La prueba confirma que el buscador se monta en la shell autenticada y que no apa
 | Pruebas de snapshots | Aprobada | `node --test functions/test/snapshot.test.js`: 3 pruebas aprobadas, 0 fallos |
 | Referencia del script | Aprobada | `index.html` carga `./busqueda-global.js` antes de `app.js` |
 | APP_SHELL y versión | Aprobada | `sw.js` contiene `./busqueda-global.js` y `CACHE_VERSION = v1.6.20` |
+| GitHub Actions y GitHub Pages | Aprobada | Los workflows de publicación para `c4c4fdb` terminaron con `success`; Pages sirvió `sw.js` y `busqueda-global.js` con HTTP 200 |
 | Integridad del diff | Aprobada | `git diff --check` terminó sin error |
 | Login sin buscador | Aprobada | En origen limpio `http://127.0.0.1:4177/?login-check=1`, el DOM reportó `searchElements: 0`; solo estuvieron visibles los campos de correo y contraseña |
 | REPARTIDOR dentro de alcance | Aprobada | Con datos sintéticos, el índice devolvió solo Cliente Norte, Zona Norte, Pipa Norte, Medidor Norte y Jornada propia |
@@ -46,9 +47,11 @@ searchInputs: ["correo@ejemplo.com", "••••••"]
 
 Por tanto, el buscador **no forma parte de la experiencia previa al acceso**. En el código, `App` retorna `Login` cuando no existe `currentUser` y solo monta `BusquedaGlobal` dentro de la topbar posterior a esa condición.
 
-## Validaciones pendientes antes de publicar
+## Estado de publicación
 
-Queda pendiente únicamente la publicación y la comprobación de la versión remota en GitHub Pages. Después del push debe comprobarse la respuesta HTTP de `sw.js` y `busqueda-global.js`, además del estado público de Actions. La modificación local pendiente de `documentación versiones/45_permisos_interpretacion_operativa/MATRIZ_INTERPRETACION_AMBIGUEDADES.md` no se incluirá.
+El commit `c4c4fdb00ca3cd6b44ffd06f136a05b3db50c143` se publicó en `main`. Los workflows `Publicar prueba en GitHub Pages` y `pages build and deployment` terminaron con `success`. Con caché invalidada, `https://shemaapp.github.io/fluxora/sw.js` respondió HTTP 200 y expuso `v1.6.20` junto con `./busqueda-global.js`; el archivo `https://shemaapp.github.io/fluxora/busqueda-global.js` respondió HTTP 200 y contiene `window.BusquedaGlobal`.
+
+La modificación local pendiente de `documentación versiones/45_permisos_interpretacion_operativa/MATRIZ_INTERPRETACION_AMBIGUEDADES.md` no se incluyó.
 
 ## Fuentes de verificación internas
 
