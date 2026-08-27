@@ -25,3 +25,11 @@ La validación estática confirma la composición, la sintaxis y la conservació
 ## Estado
 
 La matriz de interpretación documental existente conserva sus cambios locales separados y no forma parte de esta versión de configuración. Esta versión modifica únicamente `config.js`, `sw.js` y los documentos de `49_configuracion_simplificada`.
+
+## Prueba de flujo en interfaz
+
+Se abrió un origen local fresco y se montó el componente con un usuario ADMIN sintético, sin escribir datos. La navegación mostró el primer nivel `Cuenta`, `Operación` y `Acceso`. `Cuenta` mostró Perfil, Contraseña, PIN y Privacidad; `Operación` cambió el segundo nivel a Medición y Flota, y ambas subopciones abrieron sus componentes; `Acceso` cambió el segundo nivel a Usuarios y Permisos, y ambas subopciones abrieron sus componentes.
+
+Después se montó el componente con un usuario REPARTIDOR sintético. Solo apareció Cuenta, con Perfil, Contraseña, PIN y Privacidad. Operación y Acceso no aparecieron en el DOM, y Privacidad abrió correctamente.
+
+La primera inspección del origen anterior utilizó una versión en caché del componente. La prueba se repitió en `127.0.0.1:4176` después de limpiar el service worker y confirmó el código actualizado. No se produjeron errores nuevos de JavaScript ni escrituras en Firestore.
