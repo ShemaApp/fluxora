@@ -50,7 +50,7 @@ function Permisos({
       marginBottom: 14,
       lineHeight: 1.5
     }
-  }, "Concede o retira, por persona, el acceso de lectura a cada pantalla y el permiso para crear o editar en cada formulario. En el repartidor, las capacidades operativas permanecen habilitadas; Productos, Inventario, Reportes y la exportación CSV están bloqueados. Los administradores siempre tienen acceso completo y no aparecen en esta lista."), err && React.createElement("div", {
+  }, "Concede o retira, por persona, el acceso de lectura a cada pantalla y el permiso para crear o editar en cada formulario. En el repartidor, las capacidades operativas y Sincronización permanecen habilitadas; Productos, Inventario, Reportes, la exportación CSV y las pantallas administrativas están bloqueados. Los administradores siempre tienen acceso completo y no aparecen en esta lista."), err && React.createElement("div", {
     style: {
       background: 'var(--danger-bg)',
       borderRadius: 4,

@@ -6,7 +6,7 @@
    y pinKey). */
 
 /* ── Modelo de permisos: constantes de rol + helpers de acceso ── */
-const TABS_INFO = [['nota', '', 'Venta administrativa'], ['clientes', '', 'Clientes'], ['creditos', '', 'Créditos'], ['ruta', '', 'Jornadas'], ['jornada', '', 'Control'], ['repartidores', '', 'Operación'], ['productos', '', 'Catálogo'], ['inventario', '', 'Inventario'], ['reportes', '', 'Reportes'], ['gerencia', '', 'Caja'], ['jerarquia', '', 'Cobertura']];
+const TABS_INFO = [['nota', '', 'Venta administrativa'], ['clientes', '', 'Clientes'], ['creditos', '', 'Créditos'], ['ruta', '', 'Jornadas'], ['jornada', '', 'Control'], ['sincronizacion', '', 'Sincronización'], ['repartidores', '', 'Operación'], ['productos', '', 'Catálogo'], ['inventario', '', 'Inventario'], ['reportes', '', 'Reportes'], ['gerencia', '', 'Caja'], ['jerarquia', '', 'Cobertura']];
 const EDICION_INFO = [['productos', '', 'Editar productos'], ['clientes', '', 'Editar clientes'], ['creditos', '', 'Registrar pagos']];
 const ACCIONES_INFO = [['password', '', 'Cambiar su propia contraseña']];
 const ACCIONES_DEFAULT_ROL = {
@@ -47,7 +47,8 @@ const TABS_DEFAULT_ROL = {
     reportes: true,
     gerencia: true,
     jerarquia: true,
-    jornada: true
+    jornada: true,
+    sincronizacion: false
   },
   repartidor: {
     productos: false,
@@ -56,6 +57,7 @@ const TABS_DEFAULT_ROL = {
     creditos: false,
     ruta: true,
     jornada: true,
+    sincronizacion: true,
     repartidores: false,
     inventario: false,
     reportes: false,
@@ -86,6 +88,7 @@ const permisoTabs = u => {
     tabs.creditos = false;
     tabs.ruta = true;
     tabs.jornada = true;
+    tabs.sincronizacion = true;
     tabs.repartidores = false;
     tabs.gerencia = false;
     // Restricciones estructurales: no se pueden reactivar desde UI.

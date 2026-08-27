@@ -12,9 +12,28 @@
   const DB_VERSION = 2;
   const STORE = 'ventas_agua';
   const RETRY_STATES = ['pendiente', 'reintentando'];
+  const SYNC_STATUS_KEY = 'fluxora_sync_status_v1';
+  const SYNC_EVENT = 'fluxora:sincronizacion-estado';
   let dbOpenPromise = null;
   let syncPromise = null;
   const listeners = new Set();
+  const syncListeners = new Set();
+  const storageKey = () => {
+    try {
+      const user = global.auth?.currentUser || global.firebase?.auth?.().currentUser;
+      return user?.uid ? `${SYNC_STATUS_KEY}_${user.uid}` : SYNC_STATUS_KEY;
+    } catch (e) { return SYNC_STATUS_KEY; }
+  };
+  const readSavedSyncStatus = () => {
+    try { return JSON.parse(global.localStorage?.getItem(storageKey()) || '{}'); } catch (e) { return {}; }
+  };
+  let syncStatus = {
+    ultimaSincronizacion: null,
+    ultimaResultado: null,
+    pendientes: 0,
+    errores: [],
+    ...readSavedSyncStatus()
+  };
 
   const currentUid = () => {
     try { return global.auth?.currentUser?.uid || global.firebase?.auth?.().currentUser?.uid || null; } catch (e) { return null; }
@@ -48,6 +67,29 @@
           resetDbConnection();
         };
         localDb.onclose = resetDbConnection;
+        // Los registros creados antes del contrato de sincronización reciben
+        // metadatos compatibles sin eliminarse ni cambiar su contenido operativo.
+        try {
+          const tx = localDb.transaction(STORE, 'readwrite');
+          const store = tx.objectStore(STORE);
+          const cursorRequest = store.openCursor();
+          cursorRequest.onsuccess = event => {
+            const cursor = event.target.result;
+            if (!cursor) return;
+            const record = cursor.value || {};
+            cursor.update({
+              ...record,
+              idLocal: record.idLocal || record.id,
+              syncStatus: record.syncStatus || (record.estado === 'reintentando' ? 'syncing' : record.estado === 'requiere_revision' ? 'error' : 'pending'),
+              createdOfflineAt: record.createdOfflineAt || record.creadoEn || new Date().toISOString(),
+              updatedOfflineAt: record.updatedOfflineAt || record.actualizadoEn || record.creadoEn || new Date().toISOString(),
+              errorHistorial: Array.isArray(record.errorHistorial) ? record.errorHistorial : []
+            });
+            cursor.continue();
+          };
+        } catch (e) {
+          console.warn('No se pudieron completar metadatos de la cola local:', e);
+        }
         resolve(localDb);
       };
     });
@@ -96,9 +138,44 @@
   const clone = value => JSON.parse(JSON.stringify(value));
   const uid = () => global.crypto?.randomUUID?.() || 'off-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
 
-  const notify = async () => {
+  const erroresDeRegistros = registros => (registros || [])
+    .filter(record => record && (record.ultimoError || record.syncStatus === 'error' || record.estado === 'requiere_revision'))
+    .sort((a, b) => new Date(b.updatedOfflineAt || b.actualizadoEn || b.creadoEn || 0) - new Date(a.updatedOfflineAt || a.actualizadoEn || a.creadoEn || 0))
+    .slice(0, 20)
+    .map(record => ({
+      idLocal: record.idLocal || record.id,
+      ventaId: record.id,
+      syncStatus: record.syncStatus || record.estado || 'error',
+      mensaje: record.ultimoError || 'La operación requiere revisión',
+      fecha: record.updatedOfflineAt || record.actualizadoEn || record.creadoEn || null,
+      jornadaId: record.jornadaId || null
+    }));
+  const emitirEstadoSincronizacion = (resumen, nuevosErrores = []) => {
+    const erroresActuales = [...(syncStatus.errores || []), ...erroresDeRegistros(resumen.registros), ...(nuevosErrores || [])];
+    const errores = erroresActuales.filter((item, indice, lista) => item && lista.findIndex(otro => `${otro.idLocal}:${otro.mensaje}:${otro.fecha}` === `${item.idLocal}:${item.mensaje}:${item.fecha}`) === indice).slice(-20).reverse();
+    syncStatus = {
+      ...syncStatus,
+      pendientes: Number(resumen.pendientes || 0),
+      errores
+    };
+    try {
+      global.localStorage?.setItem(storageKey(), JSON.stringify({
+        ultimaSincronizacion: syncStatus.ultimaSincronizacion,
+        ultimaResultado: syncStatus.ultimaResultado,
+        errores: syncStatus.errores
+      }));
+    } catch (e) {}
+    syncListeners.forEach(fn => { try { fn({ ...syncStatus }); } catch (e) { console.warn('Listener de sincronización:', e); } });
+    try {
+      if (typeof global.CustomEvent === 'function') global.dispatchEvent(new global.CustomEvent(SYNC_EVENT, { detail: { ...syncStatus } }));
+    } catch (e) {}
+    return { ...syncStatus };
+  };
+  const notify = async (nuevosErrores = []) => {
     const resumen = await (global.appResumenVentasOffline ? global.appResumenVentasOffline() : Promise.resolve({ total: 0, pendientes: 0, incidencias: 0, registros: [] })).catch(() => ({ total: 0, pendientes: 0, incidencias: 0, registros: [] }));
     listeners.forEach(fn => { try { fn(resumen); } catch (e) { console.warn('Listener de ventas offline:', e); } });
+    emitirEstadoSincronizacion(resumen, nuevosErrores);
+    return resumen;
   };
 
   const normalizeItems = items => (items || []).map(item => ({
@@ -134,13 +211,17 @@
     };
     return {
       id: ventaId,
+      idLocal: String(payload.idLocal || ventaId),
       operacionIdempotente: String(payload.operacionIdempotente || ventaId),
       modoOperacion: 'agua_medidor',
       tipoOperacion: 'venta_agua_medidor',
       estado: 'pendiente',
+      syncStatus: 'pending',
       version: 2,
       creadoEn: fecha,
       actualizadoEn: fecha,
+      createdOfflineAt: payload.createdOfflineAt || fecha,
+      updatedOfflineAt: payload.updatedOfflineAt || fecha,
       jornadaId: String(payload.jornadaId),
       vehiculoId: String(payload.vehiculoId),
       vehiculoNombre: payload.vehiculoNombre || payload.vehiculo || '',
@@ -177,6 +258,7 @@
       notaId: payload.notaId || ventaId,
       creditoId: payload.formaPago === 'credito' ? (payload.creditoId || uid()) : null,
       ultimoError: '',
+      errorHistorial: [],
       intentos: 0
     };
   };
@@ -196,6 +278,10 @@
   const construirNotaBase = (venta, fecha, items, incidencia, detalleIncidencia = null) => ({
     fecha,
     fechaCapturaOffline: venta.creadoEn,
+    idLocal: venta.idLocal || venta.id,
+    syncStatus: 'synced',
+    createdOfflineAt: venta.createdOfflineAt || venta.creadoEn,
+    updatedOfflineAt: venta.updatedOfflineAt || venta.actualizadoEn,
     ventaOfflineId: venta.id,
     modoRegistro: 'conciliada_offline',
     operacionIdempotente: venta.operacionIdempotente,
@@ -267,6 +353,8 @@
       const nota = construirNotaBase(venta, fecha, venta.items, false);
       tx.set(notaRef, nota);
       tx.set(firestore.collection('lecturas_medidor').doc(`${venta.id}-despacho`), {
+        idLocal: venta.idLocal || venta.id,
+        syncStatus: 'synced',
         jornadaId: venta.jornadaId,
         tipo: 'despacho_calculado',
         lecturaFisica: false,
@@ -297,6 +385,8 @@
         operacion: 'venta_agua_medidor'
       });
       if (creditoRef) tx.set(creditoRef, {
+        idLocal: venta.idLocal || venta.id,
+        syncStatus: 'synced',
         notaId: notaRef.id,
         ventaOfflineId: venta.id,
         clienteId: venta.cliente.id,
@@ -350,19 +440,52 @@
 
   const guardar = async payload => {
     const venta = normalizePayload(payload);
+    // Regla local-first: la operación nace en IndexedDB, incluso cuando hay
+    // conexión. Firestore solo se toca después de confirmar el registro local.
+    await putRecord(venta);
+    await notify();
+    if (!global.navigator?.onLine) return { estado: 'pendiente_local', syncStatus: 'pending', idLocal: venta.idLocal, ventaId: venta.id, notaId: venta.notaId, total: venta.total };
+    let estadoNotificado = false;
     try {
-      if (!global.navigator?.onLine) return enqueue(venta);
-      const resultado = await conciliar(venta);
-      await notify();
-      return resultado;
-    } catch (error) {
-      if (error.__appBloqueo === true) throw error;
-      if (esIncidencia(error)) {
-        const resultado = await registrarIncidenciaSinTransaccion(venta, error);
-        await notify();
-        return resultado;
+      const resultado = await processOne(venta);
+      const fechaSync = new Date().toISOString();
+      const erroresResultado = resultado.estado === 'incidencia_agua'
+        ? [{ idLocal: resultado.idLocal || venta.idLocal, ventaId: venta.id, syncStatus: 'synced_with_incident', mensaje: 'La venta se sincronizó y requiere revisión de conciliación', fecha: fechaSync, jornadaId: venta.jornadaId }]
+        : resultado.estado === 'bloqueada'
+          ? [{ idLocal: venta.idLocal, ventaId: venta.id, syncStatus: 'blocked', mensaje: resultado.error || 'La venta fue bloqueada durante la sincronización', fecha: fechaSync, jornadaId: venta.jornadaId }]
+          : resultado.estado === 'requiere_revision'
+            ? [{ idLocal: venta.idLocal, ventaId: venta.id, syncStatus: 'error', mensaje: resultado.error || 'La venta requiere revisión antes de confirmarse', fecha: fechaSync, jornadaId: venta.jornadaId }]
+            : [];
+      syncStatus = {
+        ...syncStatus,
+        ultimaSincronizacion: fechaSync,
+        ultimaResultado: { total: 1, sincronizadas: resultado.estado === 'confirmada' ? 1 : 0, incidencias: resultado.estado === 'incidencia_agua' ? 1 : 0, pendientes: 0, errores: erroresResultado, origen: 'venta_online' }
+      };
+      await notify(erroresResultado);
+      estadoNotificado = true;
+      if (resultado.estado === 'bloqueada') {
+        throw errorBloqueo(resultado.error || 'La venta fue bloqueada durante la sincronización', { tipo: 'venta_bloqueada', idLocal: venta.idLocal });
       }
-      if (isRetryableError(error)) return enqueue(venta);
+      if (resultado.estado === 'requiere_revision') {
+        const revision = new Error(resultado.error || 'La venta requiere revisión antes de confirmarse');
+        revision.__appNoReintentar = true;
+        revision.__appDetalle = { tipo: 'venta_requiere_revision', idLocal: venta.idLocal };
+        throw revision;
+      }
+      return { ...resultado, idLocal: venta.idLocal, syncStatus: resultado.syncStatus || 'synced' };
+    } catch (error) {
+      if (error.__appBloqueo === true) {
+        if (!estadoNotificado) await notify([{ idLocal: venta.idLocal, ventaId: venta.id, syncStatus: 'blocked', mensaje: error.message, fecha: new Date().toISOString(), jornadaId: venta.jornadaId }]);
+        throw error;
+      }
+      if (error.__appNoReintentar === true) {
+        if (!estadoNotificado) await notify([{ idLocal: venta.idLocal, ventaId: venta.id, syncStatus: 'error', mensaje: error.message, fecha: new Date().toISOString(), jornadaId: venta.jornadaId }]);
+        throw error;
+      }
+      if (isRetryableError(error)) {
+        await notify([{ idLocal: venta.idLocal, ventaId: venta.id, syncStatus: 'error', mensaje: error.message, fecha: new Date().toISOString(), jornadaId: venta.jornadaId }]);
+        return { estado: 'pendiente_local', syncStatus: 'pending', idLocal: venta.idLocal, ventaId: venta.id, notaId: venta.notaId, total: venta.total };
+      }
       throw error;
     }
   };
@@ -370,47 +493,54 @@
   const processOne = async venta => {
     const actual = await getRecord(venta.id);
     if (!actual || !RETRY_STATES.includes(actual.estado)) return { estado: actual?.estado || 'omitida' };
-    const reintentando = { ...actual, estado: 'reintentando', intentos: Number(actual.intentos || 0) + 1, actualizadoEn: new Date().toISOString() };
+    const actualizadoEn = new Date().toISOString();
+    const reintentando = { ...actual, estado: 'reintentando', syncStatus: 'syncing', intentos: Number(actual.intentos || 0) + 1, actualizadoEn, updatedOfflineAt: actualizadoEn };
     await putRecord(reintentando);
     try {
       const resultado = await conciliar(reintentando);
       await deleteRecord(reintentando.id);
-      return resultado;
+      return { ...resultado, idLocal: reintentando.idLocal || reintentando.id, syncStatus: 'synced' };
     } catch (error) {
       if (error.__appBloqueo === true) {
         await deleteRecord(reintentando.id);
-        return { estado: 'bloqueada', ventaId: reintentando.id, error: error.message };
+        return { estado: 'bloqueada', ventaId: reintentando.id, idLocal: reintentando.idLocal || reintentando.id, error: error.message };
       }
       if (esIncidencia(error)) {
         const resultado = await registrarIncidenciaSinTransaccion(reintentando, error);
         await deleteRecord(reintentando.id);
-        return resultado;
+        return { ...resultado, idLocal: reintentando.idLocal || reintentando.id, syncStatus: 'synced_with_incident' };
       }
-      const pendiente = { ...reintentando, estado: isRetryableError(error) ? 'pendiente' : 'requiere_revision', ultimoError: error.message, actualizadoEn: new Date().toISOString() };
+      const actualizadoError = new Date().toISOString();
+      const errorHistorial = [...(reintentando.errorHistorial || []), { mensaje: error.message, fecha: actualizadoError, codigo: error?.code || null }].slice(-10);
+      const pendiente = { ...reintentando, estado: isRetryableError(error) ? 'pendiente' : 'requiere_revision', syncStatus: isRetryableError(error) ? 'pending' : 'error', ultimoError: error.message, errorHistorial, actualizadoEn: actualizadoError, updatedOfflineAt: actualizadoError };
       await putRecord(pendiente);
       if (!isRetryableError(error)) return { estado: 'requiere_revision', ventaId: pendiente.id, error: error.message };
       throw error;
     }
   };
 
-  const sincronizar = async () => {
-    if (!global.navigator?.onLine) return { total: 0, sincronizadas: 0, incidencias: 0, pendientes: 0 };
+  const sincronizar = async (origen = 'automatico') => {
+    if (!global.navigator?.onLine) return { total: 0, sincronizadas: 0, incidencias: 0, pendientes: 0, origen, fueraDeLinea: true };
     if (syncPromise) return syncPromise;
     syncPromise = (async () => {
       const records = (await allRecords()).filter(record => RETRY_STATES.includes(record.estado)).sort((a, b) => new Date(a.creadoEn) - new Date(b.creadoEn));
-      const resultado = { total: records.length, sincronizadas: 0, incidencias: 0, pendientes: 0, errores: [] };
+      const resultado = { total: records.length, sincronizadas: 0, incidencias: 0, pendientes: 0, errores: [], origen };
       for (const record of records) {
         try {
           const r = await processOne(record);
-          if (r.estado === 'incidencia_agua') resultado.incidencias++;
-          else if (r.estado === 'confirmada' || r.estado === 'pendiente_local') resultado.sincronizadas++;
+          if (r.estado === 'incidencia_agua') {
+            resultado.incidencias++;
+            resultado.errores.push({ idLocal: r.idLocal || r.ventaId, ventaId: r.ventaId, syncStatus: 'synced_with_incident', mensaje: 'La venta se sincronizó y requiere revisión de conciliación', fecha: new Date().toISOString() });
+          } else if (r.estado === 'confirmada' || r.estado === 'pendiente_local') resultado.sincronizadas++;
+          else if (r.estado === 'bloqueada') resultado.errores.push({ idLocal: r.idLocal || r.ventaId, ventaId: r.ventaId, syncStatus: 'blocked', mensaje: r.error, fecha: new Date().toISOString() });
         } catch (error) {
           resultado.pendientes++;
-          resultado.errores.push({ ventaId: record.id, mensaje: error.message });
+          resultado.errores.push({ idLocal: record.idLocal || record.id, ventaId: record.id, syncStatus: 'error', mensaje: error.message, fecha: new Date().toISOString() });
           break;
         }
       }
-      await notify();
+      syncStatus = { ...syncStatus, ultimaSincronizacion: new Date().toISOString(), ultimaResultado: resultado };
+      await notify(resultado.errores);
       return resultado;
     })().finally(() => { syncPromise = null; });
     return syncPromise;
@@ -434,6 +564,13 @@
     resumen().then(callback).catch(() => {});
     return () => listeners.delete(callback);
   };
+  const obtenerEstadoSincronizacion = () => ({ ...syncStatus, errores: [...(syncStatus.errores || [])] });
+  const subscribeSync = callback => {
+    if (typeof callback !== 'function') return () => {};
+    syncListeners.add(callback);
+    callback(obtenerEstadoSincronizacion());
+    return () => syncListeners.delete(callback);
+  };
 
   global.appGuardarVentaAgua = guardar;
   global.appEncolarVentaAgua = enqueue;
@@ -441,9 +578,18 @@
   global.appVentasPendientesJornada = pendientesJornada;
   global.appResumenVentasOffline = resumen;
   global.appSuscribirVentasOffline = subscribe;
+  global.appObtenerEstadoSincronizacion = obtenerEstadoSincronizacion;
+  global.appSuscribirSincronizacion = subscribeSync;
   global.addEventListener('online', () => setTimeout(() => sincronizar(), 250));
   try {
     global.firebase?.auth?.().onAuthStateChanged(user => {
+      syncStatus = {
+        ultimaSincronizacion: null,
+        ultimaResultado: null,
+        pendientes: 0,
+        errores: [],
+        ...readSavedSyncStatus()
+      };
       notify();
       if (user && global.navigator?.onLine) setTimeout(() => sincronizar(), 250);
     });

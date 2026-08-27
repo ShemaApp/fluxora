@@ -19,9 +19,9 @@ function App() {
   }, []);
   const esAdmin = currentUser?.role === 'admin';
   const esRepartidor = currentUser?.role === 'repartidor';
-  const ALL_TABS = [['home', '', 'Inicio'], ['clientes', '', 'Clientes'], ['creditos', '', 'Créditos'], ['ruta', '', esRepartidor ? 'Operación' : 'Jornadas'], ['jornada', '', esRepartidor ? 'Jornadas' : 'Control'], ['repartidores', '', 'Operación'], ['productos', '', 'Catálogo'], ['inventario', '', 'Inventario'], ['reportes', '', 'Reportes'], ['gerencia', '', 'Caja'], ['jerarquia', '', 'Cobertura'], ['privacidad', '', 'Privacidad']];
+  const ALL_TABS = [['home', '', 'Inicio'], ['clientes', '', 'Clientes'], ['creditos', '', 'Créditos'], ['ruta', '', esRepartidor ? 'Operación' : 'Jornadas'], ['jornada', '', esRepartidor ? 'Jornadas' : 'Control'], ['sincronizacion', '', 'Sincronización'], ['repartidores', '', 'Operación'], ['productos', '', 'Catálogo'], ['inventario', '', 'Inventario'], ['reportes', '', 'Reportes'], ['gerencia', '', 'Caja'], ['jerarquia', '', 'Cobertura'], ['privacidad', '', 'Privacidad']];
   const permTabs = permisoTabs(currentUser);
-  const tabsPermitidos = esRepartidor ? ['home', 'ruta', 'jornada'] : ['home', 'privacidad', ...ALL_TABS.filter(([id]) => id !== 'home' && id !== 'privacidad' && permTabs[id]).map(([id]) => id)];
+  const tabsPermitidos = esRepartidor ? ['home', 'ruta', 'jornada', 'sincronizacion'] : ['home', 'privacidad', ...ALL_TABS.filter(([id]) => id !== 'home' && id !== 'privacidad' && permTabs[id]).map(([id]) => id)];
   const TABS = ALL_TABS.filter(([id]) => tabsPermitidos.includes(id));
   useEffect(() => {
     if (!currentUser) return;
@@ -280,6 +280,10 @@ function App() {
     vehiculos,
     medidores,
     currentUser: currentUser
+  }), tab === 'sincronizacion' && esRepartidor && React.createElement(Sincronizacion, {
+    currentUser: currentUser,
+    isOnline: isOnline,
+    offlineVentaResumen: offlineVentaResumen
   }), tab === 'jerarquia' && React.createElement(JerarquiaPanel, {
     ...ctx,
     medicion,
