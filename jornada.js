@@ -2,6 +2,7 @@
    La localidad es la unidad operativa; vehículo y medidor llegan como
    referencias separadas desde su asignación administrativa. */
 const CAPACIDAD_TANQUE_LITROS = 5000;
+const FACTOR_LITROS_POR_GARRAFON = 20;
 function JornadaMedidor({ localidades = [], jornadas = [], notas = [], clientes = [], cargasAgua = [], servicios = [], medicion = null, vehiculos = [], medidores = [], currentUser = {}, onIrA, offlineVentaResumen = {} }) {
   const localidadesDisponibles = obtenerLocalidadesAsignadas({ localidades, currentUser, localidadIds: currentUser.localidadIds });
   const operacionesLocales = (offlineVentaResumen?.operaciones || offlineVentaResumen?.registros || [])
