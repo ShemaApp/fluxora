@@ -172,6 +172,18 @@ function Configuracion({
     clearPin(currentUser.uid);
     flash('PIN eliminado de este dispositivo');
   };
+  const gruposConfiguracion = [
+    {
+      id: 'cuenta',
+      label: 'Cuenta',
+      items: [['perfil', 'Perfil'], ...(permisoAcciones(currentUser).password ? [['password', 'Contraseña']] : []), ['pin', 'PIN'], ['privacidad', 'Privacidad']]
+    },
+    ...(isAdmin ? [
+      { id: 'operacion', label: 'Operación', items: [['medicion', 'Medición'], ['flota', 'Flota']] },
+      { id: 'acceso', label: 'Acceso', items: [['usuarios', 'Usuarios'], ['permisos', 'Permisos']] }
+    ] : [])
+  ];
+  const grupoActivo = gruposConfiguracion.find(grupo => grupo.items.some(([v]) => v === sub)) || gruposConfiguracion[0];
   return React.createElement("div", {
     className: 'fx-page-config',
     style: {
@@ -182,9 +194,17 @@ function Configuracion({
     style: {
       fontSize: 20,
       fontWeight: 800,
-      marginBottom: 16
+      marginBottom: 4
     }
-  }, "Configuración"), msg && React.createElement("div", {
+  }, "Configuración"), React.createElement("div", {
+    className: 'fx-config-intro',
+    style: {
+      color: 'var(--ink-soft)',
+      fontSize: 12,
+      lineHeight: 1.45,
+      marginBottom: 14
+    }
+  }, isAdmin ? 'Administra cuenta, operación y acceso desde una sola vista.' : 'Administra tu cuenta y privacidad desde una sola vista.'), msg && React.createElement("div", {
     style: {
       background: 'var(--ok-bg)',
       borderRadius: 8,
@@ -202,14 +222,42 @@ function Configuracion({
       color: 'var(--danger-text)',
       marginBottom: 12
     }
-  }, err), React.createElement(Row, {
-    className: 'fx-config-tabs',
+  }, err), React.createElement("div", {
+    className: 'fx-config-groups',
     style: {
+      display: 'grid',
+      gridTemplateColumns: `repeat(${gruposConfiguracion.length}, minmax(0, 1fr))`,
       gap: 6,
-      marginBottom: 16,
-      flexWrap: 'wrap'
+      marginBottom: 8
     }
-  }, [['perfil', 'Perfil'], ...(permisoAcciones(currentUser).password ? [['password', 'Contraseña']] : []), ['pin', 'PIN'], ['privacidad', 'Privacidad'], ...(isAdmin ? [['usuarios', 'Usuarios'], ['permisos', 'Permisos'], ['medicion', 'Medición'], ['flota', 'Flota']] : [])].map(([v, l]) => React.createElement("button", {
+  }, gruposConfiguracion.map(grupo => React.createElement("button", {
+    key: grupo.id,
+    onClick: () => {
+      setSub(grupo.items[0][0]);
+      setErr('');
+      setMsg('');
+    },
+    style: {
+      padding: '10px 8px',
+      borderRadius: 8,
+      border: grupoActivo.id === grupo.id ? '1px solid var(--accent)' : '1px solid var(--line)',
+      background: grupoActivo.id === grupo.id ? 'var(--accent)' : 'var(--surface)',
+      color: grupoActivo.id === grupo.id ? 'var(--ink)' : 'var(--ink-soft)',
+      fontSize: 11,
+      fontWeight: 800,
+      cursor: 'pointer'
+    }
+  }, grupo.label))), React.createElement("div", {
+    className: 'fx-config-options',
+    style: {
+      display: 'flex',
+      gap: 5,
+      flexWrap: 'wrap',
+      marginBottom: 16,
+      paddingBottom: 8,
+      borderBottom: '1px solid var(--line)'
+    }
+  }, grupoActivo.items.map(([v, l]) => React.createElement("button", {
     key: v,
     onClick: () => {
       setSub(v);
@@ -217,14 +265,13 @@ function Configuracion({
       setMsg('');
     },
     style: {
-      flex: '1 1 72px',
-      padding: '8px 2px',
-      borderRadius: 8,
+      padding: '6px 9px',
+      borderRadius: 6,
       border: 'none',
-      background: sub === v ? 'var(--accent)' : 'var(--surface-2)',
+      background: sub === v ? 'var(--surface-2)' : 'transparent',
       color: sub === v ? 'var(--ink)' : 'var(--ink-soft)',
-      fontSize: 10,
-      fontWeight: 700,
+      fontSize: 11,
+      fontWeight: sub === v ? 800 : 600,
       cursor: 'pointer'
     }
   }, l))), sub === 'perfil' && React.createElement(React.Fragment, null, React.createElement(Card, null, React.createElement("div", {
