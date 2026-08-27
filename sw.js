@@ -4,7 +4,7 @@
    archivo .js/.html del proyecto, actualiza APP_SHELL y sube CACHE_VERSION
    para forzar la actualización en los dispositivos ya instalados. */
 
-const CACHE_VERSION = 'v1.6.19';
+const CACHE_VERSION = 'v1.6.20';
 const CACHE_NAME = `app-shell-${CACHE_VERSION}`;
 
 const APP_SHELL = [
@@ -41,6 +41,7 @@ const APP_SHELL = [
   './config.js',
   './app.js',
   './repartidores.js',
+  './busqueda-global.js',
   './inventario.js',
   './reportes.js',
   './gerencia.js',

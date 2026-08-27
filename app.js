@@ -161,7 +161,11 @@ function App() {
       textTransform: 'uppercase',
       letterSpacing: '.08em'
     }
-  }, 'FLUXORA')), React.createElement(Row, {
+  }, 'FLUXORA')), React.createElement(BusquedaGlobal, {
+    currentUser: currentUser,
+    onIrA: navegarA,
+    ...ctx
+  }), React.createElement(Row, {
     className: 'app-topbar-trailing',
     style: {
       gap: 6
