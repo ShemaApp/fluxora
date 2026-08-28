@@ -29,6 +29,8 @@ La diferencia de color por rol se limita a la navegación estructural: ADMIN usa
 
 ## Estado de publicación
 
-El cambio está aplicado en el worktree local. No se hizo commit, push ni despliegue de GitHub Pages en esta iteración. El service worker fue incrementado localmente a `v1.6.21` para que el cambio de estilos fuerce renovación de caché cuando se publique.
+La iteración quedó publicada en `main` mediante el commit `3b914123959d793df76187b9638a705701101eba` con el mensaje `Apply role-based Fluxora visual palette`. Los workflows `Publicar prueba en GitHub Pages` y `pages-build-deployment` finalizaron con estado `success` para ese commit.
 
-La matriz local pendiente de la versión 45, su revisión técnica y las reglas Firestore de la versión 51 permanecen fuera de esta iteración.
+GitHub Pages respondió HTTP 200 para `sw.js` y `visual-fluxora.css`. El `sw.js` publicado informa `v1.6.21`, conserva `./busqueda-global.js` en el APP_SHELL y `app.js` publicado contiene las clases visuales `app-shell-admin` y `app-shell-repartidor`. La matriz local pendiente de la versión 45, su revisión técnica y las reglas Firestore de la versión 51 permanecen fuera de esta iteración.
+
+La página de prueba está disponible en [FLUXORA](https://shemaapp.github.io/fluxora/).
