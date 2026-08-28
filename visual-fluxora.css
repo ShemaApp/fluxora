@@ -3410,3 +3410,261 @@ body::before { display: none !important; }
   .app-global-search-control input { font-size: 11px !important; }
   .app-global-search-control input::placeholder { color: rgba(255,255,255,.68) !important; font-size: 11px !important; }
 }
+
+
+/* Iteración visual 38 — Paleta FLUXORA por contexto.
+   Solo presentación: el rol existente añade una clase visual a la shell. */
+:root {
+  --fx-navy: #082A4D;
+  --fx-petroleum: #0A5B77;
+  --fx-cyan: #0798C8;
+  --fx-cyan-light: #6DD5E6;
+  --fx-amber: #0E988A;
+  --fx-ink: #132A3B;
+  --fx-ink-soft: #5B7280;
+  --fx-line: #D7E2E8;
+  --fx-line-strong: #B4C6D0;
+}
+
+.app-shell-admin,
+.app-shell-repartidor {
+  --bg: #F7FAFC;
+  --surface: #FFFFFF;
+  --surface-2: #EEF4F7;
+  --ink: #132A3B;
+  --ink-soft: #5B7280;
+  --ink-faint: #718797;
+  --line: #D7E2E8;
+  --line-strong: #B4C6D0;
+  --accent: #0E988A;
+  --accent-text: #0B6F67;
+  --accent-ink: #FFFFFF;
+  --info: #0798C8;
+  --info-text: #0A5B77;
+  --info-bg: #E2F3F8;
+  --ok: #0E988A;
+  --ok-text: #0B6F67;
+  --ok-bg: #E8F6F3;
+  --rail-ink: #F4FAFC;
+}
+
+/* ADMIN: navegación institucional en azul marino y acciones turquesa. */
+.app-shell-admin {
+  --rail: #082A4D;
+  --rail-border: #1D5570;
+  --rail-ink-faint: #B6CED9;
+  --surface-2: #EEF4F7;
+}
+
+/* REPARTIDOR: navegación turquesa y azul agua para datos de medidor. */
+.app-shell-repartidor {
+  --rail: #0C5D6A;
+  --rail-border: #1E7C83;
+  --rail-ink-faint: #BCE4E3;
+  --surface-2: #EAF7F7;
+  --line: #D4E6EA;
+  --line-strong: #AACAD1;
+}
+
+.app-shell-admin .app-topbar,
+.app-shell-repartidor .app-topbar {
+  background: var(--rail) !important;
+  color: var(--rail-ink) !important;
+  border-bottom-color: rgba(255,255,255,.16) !important;
+}
+
+.app-shell-admin .app-accent-bar,
+.app-shell-repartidor .app-accent-bar {
+  background: var(--accent) !important;
+}
+
+.app-shell-admin .app-nav-shell nav,
+.app-shell-repartidor .app-nav-shell nav {
+  background: var(--rail) !important;
+  border-right-color: var(--rail-border) !important;
+}
+
+.app-shell-admin .app-nav-shell nav button[style*="var(--rail-border)"],
+.app-shell-admin .app-nav-shell nav button[style*="var(--accent)"],
+.app-shell-repartidor .app-nav-shell nav button[style*="var(--rail-border)"],
+.app-shell-repartidor .app-nav-shell nav button[style*="var(--accent)"] {
+  background: rgba(14,152,138,.22) !important;
+  border-left-color: var(--accent) !important;
+  color: #FFFFFF !important;
+}
+
+.app-shell-admin .fx-card,
+.app-shell-repartidor .fx-card {
+  background: var(--surface) !important;
+  border-color: var(--line) !important;
+}
+
+.app-shell-admin .fx-btn-fill,
+.app-shell-repartidor .fx-btn-fill,
+.app-shell-admin button[style*="var(--accent)"],
+.app-shell-repartidor button[style*="var(--accent)"] {
+  background: var(--accent) !important;
+  color: var(--accent-ink) !important;
+  border-color: var(--accent) !important;
+}
+
+.app-shell-admin .fx-btn-fill:hover,
+.app-shell-admin .fx-btn-fill:focus-visible,
+.app-shell-repartidor .fx-btn-fill:hover,
+.app-shell-repartidor .fx-btn-fill:focus-visible,
+.app-shell-admin button[style*="var(--accent)"]:hover,
+.app-shell-admin button[style*="var(--accent)"]:focus-visible,
+.app-shell-repartidor button[style*="var(--accent)"]:hover,
+.app-shell-repartidor button[style*="var(--accent)"]:focus-visible {
+  background: #0B7D72 !important;
+  color: #FFFFFF !important;
+}
+
+.app-shell-admin .fx-btn-outline,
+.app-shell-repartidor .fx-btn-outline {
+  background: #FFFFFF !important;
+  color: var(--accent-text) !important;
+  border-color: var(--line-strong) !important;
+}
+
+.app-shell-admin .fx-btn-outline:hover,
+.app-shell-admin .fx-btn-outline:focus-visible,
+.app-shell-repartidor .fx-btn-outline:hover,
+.app-shell-repartidor .fx-btn-outline:focus-visible {
+  background: var(--surface-2) !important;
+  border-color: var(--accent) !important;
+  color: var(--accent-text) !important;
+}
+
+.app-shell-admin .fx-input,
+.app-shell-repartidor .fx-input,
+.app-shell-admin input,
+.app-shell-admin select,
+.app-shell-admin textarea,
+.app-shell-repartidor input,
+.app-shell-repartidor select,
+.app-shell-repartidor textarea {
+  background: #FFFFFF !important;
+  color: var(--ink) !important;
+  border-color: var(--line-strong) !important;
+}
+
+.app-shell-admin input:focus,
+.app-shell-admin select:focus,
+.app-shell-admin textarea:focus,
+.app-shell-repartidor input:focus,
+.app-shell-repartidor select:focus,
+.app-shell-repartidor textarea:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px rgba(14,152,138,.16) !important;
+}
+
+.app-shell-admin .app-main-content h1,
+.app-shell-admin .app-main-content h2,
+.app-shell-admin .app-main-content h3,
+.app-shell-repartidor .app-main-content h1,
+.app-shell-repartidor .app-main-content h2,
+.app-shell-repartidor .app-main-content h3 {
+  color: var(--fx-navy) !important;
+}
+
+/* El azul agua se reserva para medición, litros y disponibilidad móvil. */
+.app-shell-repartidor .fx-page-jornada [style*="AGUA DISPONIBLE"],
+.app-shell-repartidor .fx-page-jornada [style*="Lectura calculada"],
+.app-shell-repartidor .fx-page-jornada .fx-recharge-panel,
+.app-shell-repartidor .fx-page-route .fx-route-meter,
+.app-shell-repartidor .fx-page-route [style*="medidor"] {
+  border-color: rgba(7,152,200,.42) !important;
+}
+
+.app-shell-repartidor .fx-page-jornada [style*="background: var(--surface-2)"],
+.app-shell-repartidor .fx-page-route [style*="background: var(--surface-2)"] {
+  background: var(--info-bg) !important;
+}
+
+.app-shell button:not(:disabled),
+.app-shell [role="button"]:not([aria-disabled="true"]) {
+  transition: background-color .16s ease, color .16s ease, border-color .16s ease, box-shadow .16s ease, transform .12s ease !important;
+}
+
+.app-shell button:not(:disabled):active,
+.app-shell [role="button"]:not([aria-disabled="true"]):active {
+  transform: scale(.98) !important;
+}
+
+.app-shell button:focus-visible,
+.app-shell [role="button"]:focus-visible,
+.app-shell input:focus-visible,
+.app-shell select:focus-visible,
+.app-shell textarea:focus-visible {
+  outline: 3px solid rgba(7,152,200,.28) !important;
+  outline-offset: 2px !important;
+}
+
+/* Refuerzo de marca del login: azul marino, turquesa y blanco; sin amarillo. */
+.fx-login-brand-panel { background: #082A4D !important; }
+.fx-login-brand-rule,
+.fx-login-form-rule,
+.fx-login-form-column .fx-login-panel button.fx-btn-fill {
+  background: #0E988A !important;
+}
+.fx-login-form-column .fx-login-panel button.fx-btn-fill { color: #FFFFFF !important; }
+.fx-login-form-column .fx-login-panel button.fx-btn-fill:hover,
+.fx-login-form-column .fx-login-panel button.fx-btn-fill:focus-visible { background: #0B7D72 !important; }
+
+/* Escala legible en escritorio: los datos operativos no dependen del zoom. */
+@media (min-width: 768px) {
+  .app-shell .app-main-content { font-size: 16px !important; }
+  .app-shell .app-main-content button,
+  .app-shell .app-main-content select,
+  .app-shell .app-main-content input,
+  .app-shell .app-main-content textarea { font-size: 15px !important; }
+  .app-shell .app-main-content button { min-height: 44px !important; }
+  .app-shell .app-main-content label,
+  .app-shell .app-main-content .fx-label { font-size: 14px !important; }
+  .app-shell .app-main-content [style*="font-size: 10px"],
+  .app-shell .app-main-content [style*="font-size: 11px"],
+  .app-shell .app-main-content [style*="font-size: 12px"],
+  .app-shell .app-main-content [style*="font-size: 13px"] { font-size: 14px !important; }
+  .app-shell .app-main-content h1 { font-size: clamp(26px, 2.4vw, 32px) !important; }
+  .app-shell .app-main-content h2 { font-size: clamp(22px, 2vw, 27px) !important; }
+  .app-shell .app-main-content h3 { font-size: 18px !important; }
+  .app-shell .app-nav-shell nav button { font-size: 14px !important; min-height: 44px !important; }
+  .app-shell .app-topbar-brand { font-size: 16px !important; }
+  .app-shell .app-topbar-trailing > span { font-size: 14px !important; }
+  .app-shell .app-global-search-control input { font-size: 15px !important; }
+}
+
+@media (max-width: 767px) {
+  .app-shell .app-main-content { font-size: 15px !important; }
+  .app-shell .app-main-content button { min-height: 42px !important; }
+  .app-shell .app-global-search-control input { font-size: 13px !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell button:not(:disabled),
+  .app-shell [role="button"]:not([aria-disabled="true"]) { transition: none !important; }
+}
+
+
+/* Legibilidad desktop: mayor cuerpo y peso sin cambiar contenido ni comportamiento. */
+@media (min-width: 768px) {
+  .app-shell .app-main-content,
+  .app-shell .app-main-content input,
+  .app-shell .app-main-content select,
+  .app-shell .app-main-content textarea {
+    font-weight: 500 !important;
+  }
+  .app-shell .app-main-content input,
+  .app-shell .app-main-content select,
+  .app-shell .app-main-content textarea {
+    min-height: 46px !important;
+  }
+  .app-shell .app-main-content button {
+    font-weight: 700 !important;
+  }
+  .app-shell .app-main-content .fx-stat-tile > div:first-child {
+    font-size: 28px !important;
+    font-weight: 800 !important;
+  }
+}

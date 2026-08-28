@@ -92,7 +92,7 @@ function App() {
   const persistenciaNoDisponible = storageStatus?.verificado && storageStatus.persistente !== true;
   const mostrarBanner = !isOnline || pendientesTotales > 0 || persistenciaNoDisponible;
   return React.createElement("div", {
-    className: 'app-shell',
+    className: `app-shell ${esAdmin ? 'app-shell-admin' : 'app-shell-repartidor'}`,
     style: {
       minHeight: '100vh',
       position: 'relative',
